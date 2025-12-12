@@ -1,7 +1,6 @@
 import { v4 as uuid } from 'uuid'; //v4 gera ids únicos (uuid()), as uui: renomeia a função para uuid
 import { Equipment } from '@/types/equipment'; //pro banco de dados respeitar a tipagem/estrutura
 
-//Banco de dados em memória
 const equipmentDB: Equipment[] = [ //array de equipamentos em memória tipado como Equipment[] pra q as operações respeitem a estrutura
   {
     id: uuid(),

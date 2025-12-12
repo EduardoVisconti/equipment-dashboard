@@ -3,13 +3,13 @@ import { fetchEquipmentList, fetchEquipmentById, createEquipment, updateEquipmen
 import { Equipment } from '@/types/equipment';
 import { EquipmentFormValues } from '@/schemas/equipment';
 
-export function useEquipmentList() { //hook que vai renderizar a tabela
-  return useQuery<Equipment[]>({ queryKey: ['equipment'], queryFn: fetchEquipmentList }); //equipment é a key que identifica query e fetch usa Axios e retorna o equipment
+export function useEquipmentList() {
+  return useQuery<Equipment[]>({ queryKey: ['equipment'], queryFn: fetchEquipmentList }); //busca a lista de equipamentos da API e armazena no cache com a key 'equipment'
 }
 
 export function useEquipmentDetail(id: string) { // buscar por id > /equipment/:id , /equipment/:id/edit
   return useQuery<Equipment>({ queryKey: ['equipment', id], //key única pra cada equipamento
-    queryFn: () => fetchEquipmentById(id), //func q chama a API com o id
+    queryFn: () => fetchEquipmentById(id), //func q busca o dado do equipamento pelo id
     enabled: !!id }); //só roda se o id existir (!! converte p boolean)
 }
 
@@ -19,8 +19,7 @@ export function useCreateEquipment() {
   return useMutation({ //mutations p criar, att, deletar dados
     mutationFn: (data: EquipmentFormValues) =>  //recebe os dados do form
       createEquipment(data), //faz o POST na API
-    onSuccess: () => { queryClient.invalidateQueries //se der certo, invalida a query de equipment p refazer o fetch e atualizar a lista
-      ({ queryKey: ['equipment'] }); //refaz a query de equipment
+    onSuccess: () => { queryClient.invalidateQueries ({ queryKey: ['equipment'] }); //se der certo, invalida a query de equipment (joga fora) p refazer o fetch e att a lista buscando o novo equipamento na API!!
     },
   });
 }
@@ -29,7 +28,8 @@ export function useUpdateEquipment(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<EquipmentFormValues>) => updateEquipmentApi(id, data),
+    mutationFn: (data: Partial<EquipmentFormValues>) => //Partial pq n precisa enviar todos os campos, só os q foram alterados
+      updateEquipmentApi(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['equipment', id] });
@@ -38,12 +38,12 @@ export function useUpdateEquipment(id: string) {
 }
 
 export function useDeleteEquipment() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); //validando queries pra atualizar a lista depois de deletar
 
-  return useMutation({
-    mutationFn: (id: string) => deleteEquipmentApi(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+  return useMutation({ //mutations p criar, att, deletar dados
+    mutationFn: (id: string) => deleteEquipmentApi(id), //faz o DELETE na API
+    onSuccess: () => { //se der certo, invalida a query de equipment (joga fora) p refazer o fetch e att a lista buscando o novo equipamento na API!!
+      queryClient.invalidateQueries({ queryKey: ['equipment'] }); //atualiza a lista de equipamentos
     },
   });
 }

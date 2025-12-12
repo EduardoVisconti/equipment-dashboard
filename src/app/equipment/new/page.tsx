@@ -4,8 +4,10 @@ import { useCreateEquipment } from "@/hooks/useEquipmentMutations";
 import { equipmentSchema, EquipmentFormValues } from "@/schemas/equipment";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 
 export default function NewEquipmentPage() {
+  const router = useRouter();
   const { mutate, isPending } = useCreateEquipment();
 
   const form = useForm<EquipmentFormValues>({ //controle do form, validação, quais campos existem > receber os dados do form
@@ -20,7 +22,11 @@ export default function NewEquipmentPage() {
   });
 
   function onSubmit(data: EquipmentFormValues) {
-    mutate(data); //refaz a busca dos dados (get), att o cache, o react re-renderiza automaticamente quem estiver usando esses dados
+    mutate(data, { //refaz a busca dos dados (get), att o cache
+      onSuccess: () => {
+        router.push("/equipment"); //qnd cria, volta p a lista
+      }
+    });
   }
 
   return (

@@ -56,7 +56,7 @@ export function EquipmentTable ({ columns, data }: EquipmentTableProps) { //comp
         <TableBody>
           {table.getRowModel().rows?.length ? ( //lista de linhas calculadas pelo TanStack; se tiver linha, renderiza
             table.getRowModel().rows.map((row) => ( //para cada coluna.. crie uma linha
-              <TableRow key={row.id}> {row.getVisibleCells().map((cell) => ( //para cada coluna visível, crie uma célula
+              <TableRow key={row.id}>{row.getVisibleCells().map((cell) => ( //para cada coluna visível, crie uma célula
                   <TableCell key={cell.id}>
                     {flexRender( //desenha o conteúdo da célula
                       cell.column.columnDef.cell,

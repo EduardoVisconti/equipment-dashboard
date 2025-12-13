@@ -1,13 +1,13 @@
 "use client"; //arquivo roda no client side/navegador e não no server - permite q tenha interação e hooks
 
-import {
-  AlertDialog, AlertDialogTrigger, AlertDialogContent,AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent,AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction} from "@/components/ui/alert-dialog";
 import { useDeleteEquipment } from "@/hooks/useEquipmentQueries";
 import { ColumnDef } from "@tanstack/react-table";
 import { Equipment } from "@/types/equipment";
 import { format, differenceInDays } from "date-fns"; //biblioteca para manipulação de datas
 import { Badge } from "@/components/ui/badge"; //componente visual para status, colorido
 import Link from "next/link";
+import { parseDateOnly } from "@/lib/date";
 
 export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colunas da tabela; q exibem dados do tipo Equipment
   {
@@ -35,15 +35,15 @@ export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colu
     accessorKey: "purchaseDate", header: "Purchase Date",
     cell: ({ row }) => {
       const date = row.getValue("purchaseDate") as string;
-      return format(new Date(date), "MM/dd/yyyy");
+      return format(parseDateOnly(date)!, "MM/dd/yyyy");
     },
   },
   {
     id: "lastService", header: "Last Service",
     cell: ({ row }) => {
       const lastServiceDate = row.original.lastServiceDate; // 
-      const daysAgo = differenceInDays(new Date(), new Date(lastServiceDate + "T00:00:00"));
-
+      const daysAgo = differenceInDays(new Date(), parseDateOnly(lastServiceDate)!);
+      
       return `${daysAgo} days ago`;
     },
   },

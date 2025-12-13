@@ -3,6 +3,7 @@
 import { use } from "react";
 import { useEquipmentById } from "@/hooks/useEquipmentQueries";
 import { differenceInDays, format } from "date-fns";
+import { parseDateOnly } from "@/lib/date";
 
 interface EquipmentPageProps {
   params: Promise<{
@@ -23,10 +24,8 @@ export default function EquipmentViewPage({ params }: EquipmentPageProps) {
     return <p className="p-6 text-red-500">Equipment not found.</p>;
   }
 
-  const daysSinceService = differenceInDays(
-    new Date(),
-    new Date(data.lastServiceDate + "T00:00:00")
-  );
+  const daysSinceService = data.lastServiceDate ? differenceInDays( new Date(), parseDateOnly(data.lastServiceDate)! )
+    : null;
 
   return (
     <div className="p-6 max-w-xl space-y-4">
@@ -46,7 +45,7 @@ export default function EquipmentViewPage({ params }: EquipmentPageProps) {
 
       <div>
         <strong>Purchase Date:</strong>{" "}
-        {format(new Date(data.purchaseDate + "T00:00:00"), "MM/dd/yyyy")}
+        {format(parseDateOnly(data.purchaseDate)!, "MM/dd/yyyy")}
       </div>
 
       <div>

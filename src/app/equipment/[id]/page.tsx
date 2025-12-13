@@ -25,7 +25,7 @@ export default function EquipmentViewPage({ params }: EquipmentPageProps) {
 
   const daysSinceService = differenceInDays(
     new Date(),
-    new Date(data.lastServiceDate)
+    new Date(data.lastServiceDate + "T00:00:00")
   );
 
   return (
@@ -46,12 +46,12 @@ export default function EquipmentViewPage({ params }: EquipmentPageProps) {
 
       <div>
         <strong>Purchase Date:</strong>{" "}
-        {format(new Date(data.purchaseDate), "MM/dd/yyyy")}
+        {format(new Date(data.purchaseDate + "T00:00:00"), "MM/dd/yyyy")}
       </div>
 
       <div>
         <strong>Last Service Date:</strong>{" "}
-        {format(new Date(data.lastServiceDate), "MM/dd/yyyy")}
+        {format(new Date(data.lastServiceDate + "T00:00:00"), "MM/dd/yyyy")}
       </div>
 
       <div>

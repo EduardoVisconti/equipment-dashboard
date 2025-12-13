@@ -32,14 +32,14 @@ export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colu
     accessorKey: "purchaseDate", header: "Purchase Date",
     cell: ({ row }) => {
       const date = row.getValue("purchaseDate") as string;
-      return format(new Date(date), "MM/dd/yyyy");
+      return format(new Date(date + "T00:00:00"), "MM/dd/yyyy");
     },
   },
   {
     id: "lastService", header: "Last Service",
     cell: ({ row }) => {
       const lastServiceDate = row.original.lastServiceDate; // 
-      const daysAgo = differenceInDays(new Date(), new Date(lastServiceDate));
+      const daysAgo = differenceInDays(new Date(), new Date(lastServiceDate + "T00:00:00"));
 
       return `${daysAgo} days ago`;
     },

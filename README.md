@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Equipment Management Dashboard
 
-## Getting Started
+A full-stack frontend-focused dashboard built with **Next.js App Router** for managing equipment records.
+The application demonstrates CRUD operations, form validation, data fetching with caching, table rendering,
+and UI interactions using a modern React stack.
 
-First, run the development server:
+This project was designed as a **technical assessment / learning project**, following real-world frontend
+architecture patterns.
 
-```bash
+---
+
+## 🚀 Tech Stack
+
+- Next.js (App Router)
+- TypeScript
+- TanStack Query
+- TanStack Table
+- React Hook Form
+- Zod
+- Axios
+- date-fns
+- Zustand
+- shadcn/ui
+- TailwindCSS
+
+---
+
+## 📌 Features
+
+- View all equipment records in a dynamic table
+- Create new equipment
+- Edit existing equipment
+- View equipment details
+- Delete equipment with confirmation dialog
+- Form validation with error handling
+- Cached data fetching with automatic revalidation
+- Date formatting and “last serviced X days ago” calculation
+- Clean and reusable component structure
+
+---
+
+## 🧠 Architecture Overview
+
+The project follows a layered architecture to keep responsibilities clear and scalable:
+
+src/
+├── app/                # Next.js routes (pages & API)
+│   ├── equipment/
+│   │   ├── page.tsx
+│   │   ├── new/
+│   │   ├── [id]/
+│   │   └── [id]/edit/
+│   └── api/
+│       └── equipment/
+│           ├── route.ts
+│           └── [id]/route.ts
+│
+├── components/
+│   └── equipment/      # UI components (table, form, columns)
+│
+├── data-access/        # Axios API calls
+├── hooks/              # TanStack Query hooks
+├── schemas/            # Zod validation schemas
+├── types/              # TypeScript models
+├── lib/                # Utilities (mock DB, date helpers)
+├── stores/             # Zustand store
+
+---
+
+## 🔄 Data Flow
+
+1. User interacts with the UI
+2. Custom hooks (TanStack Query) fetch or mutate data
+3. Axios communicates with internal API routes
+4. API routes interact with a mock in-memory database
+5. Cache is invalidated and UI updates automatically
+
+---
+
+## 🧪 Mock Database
+
+This project uses an **in-memory mock database** to simulate backend behavior.
+
+Important notes:
+- Data resets when the server restarts
+- This is expected behavior
+- No real database is used
+
+---
+
+## 📅 Date Handling
+
+Dates coming from form inputs are normalized before formatting to avoid timezone issues.
+A shared utility ensures consistency across the application.
+
+---
+
+## 🧩 Forms & Validation
+
+- React Hook Form handles form state
+- Zod provides runtime and TypeScript validation
+- The same form component is reused for Create and Edit
+- Validation occurs before API submission
+
+---
+
+## 🧹 State Management
+
+- TanStack Query handles all server state
+- Zustand is used only for small UI preferences
+- No unnecessary global state
+
+---
+
+## 🖥️ Running Locally
+
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open:
+http://localhost:3000/equipment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ✅ Project Status
 
-## Learn More
+✔ CRUD complete  
+✔ Validation implemented  
+✔ Caching & revalidation working  
+✔ UI/UX polished  
+✔ Ready for review  
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 👤 Author
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built as a learning and technical assessment project to demonstrate modern frontend
+development practices using Next.js and the React ecosystem.

@@ -1,5 +1,8 @@
 "use client"; //arquivo roda no client side/navegador e não no server - permite q tenha interação e hooks
 
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent,AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction} from "@/components/ui/alert-dialog";
+import { useDeleteEquipment } from "@/hooks/useEquipmentQueries";
 import { ColumnDef } from "@tanstack/react-table";
 import { Equipment } from "@/types/equipment";
 import { format, differenceInDays } from "date-fns"; //biblioteca para manipulação de datas
@@ -32,7 +35,7 @@ export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colu
     accessorKey: "purchaseDate", header: "Purchase Date",
     cell: ({ row }) => {
       const date = row.getValue("purchaseDate") as string;
-      return format(new Date(date + "T00:00:00"), "MM/dd/yyyy");
+      return format(new Date(date), "MM/dd/yyyy");
     },
   },
   {
@@ -47,20 +50,57 @@ export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colu
 
   //coluna com botões pra levar pra página/rotas de detalhes e edição
   {
-    id: "actions", header: "Actions",
+    id: "actions",
+    header: "Actions",
     cell: ({ row }) => {
       const id = row.original.id;
+      const deleteMutation = useDeleteEquipment();
+
+      function handleDelete() {
+        deleteMutation.mutate(id);
+      }
 
       return (
         <div className="flex gap-2">
           <Link className="text-blue-600" href={`/equipment/${id}`}>
             View
           </Link>
+
           <Link className="text-green-600" href={`/equipment/${id}/edit`}>
             Edit
           </Link>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="text-red-600">Delete</button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete this equipment?
+                </AlertDialogTitle>
+
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  the equipment.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       );
     },
-  },
+  }
 ];

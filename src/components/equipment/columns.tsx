@@ -8,6 +8,7 @@ import { Equipment } from "@/types/equipment";
 import { format, differenceInDays } from "date-fns"; //biblioteca para manipulação de datas
 import { Badge } from "@/components/ui/badge"; //componente visual para status, colorido
 import Link from "next/link";
+import { Underline } from "lucide-react";
 
 export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colunas da tabela; q exibem dados do tipo Equipment
   {
@@ -72,7 +73,7 @@ export const equipmentColumns: ColumnDef<Equipment>[] = [ //definição das colu
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <button className="text-red-600">Delete</button>
+              <button className="text-red-600 hover:underline cursor-pointer">Delete</button>
             </AlertDialogTrigger>
 
             <AlertDialogContent>

@@ -1,10 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchEquipmentList, fetchEquipmentById, createEquipment, updateEquipmentApi, deleteEquipmentApi } from '@/data-access/equipment';
-import { Equipment } from '@/types/equipment';
+import type { Equipment } from '@/types/equipment';
 import { EquipmentFormValues } from '@/schemas/equipment';
 
 export function useEquipmentList() {
   return useQuery<Equipment[]>({ queryKey: ['equipment'], queryFn: fetchEquipmentList }); //busca a lista de equipamentos da API e armazena no cache com a key 'equipment'
+}
+
+export function useEquipmentById(id: string) {
+  return useQuery<Equipment>({
+    queryKey: ["equipment", id],
+    queryFn: () => fetchEquipmentById(id),
+    enabled: !!id,
+  });
 }
 
 export function useEquipmentDetail(id: string) { // buscar por id > /equipment/:id , /equipment/:id/edit

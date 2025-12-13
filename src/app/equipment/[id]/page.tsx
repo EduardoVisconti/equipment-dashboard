@@ -4,6 +4,7 @@ import { use } from "react";
 import { useEquipmentById } from "@/hooks/useEquipmentQueries";
 import { differenceInDays, format } from "date-fns";
 import { parseDateOnly } from "@/lib/date";
+import Link from "next/link";
 
 interface EquipmentPageProps {
   params: Promise<{
@@ -29,6 +30,10 @@ export default function EquipmentViewPage({ params }: EquipmentPageProps) {
 
   return (
     <div className="p-6 max-w-xl space-y-4">
+      <Link href="/equipment" className="text-sm text-blue-600 hover:underline">
+        ← Back to equipment list
+      </Link>
+      
       <h1 className="text-2xl font-semibold">Equipment Details</h1>
 
       <div>

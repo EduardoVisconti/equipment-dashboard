@@ -19,9 +19,13 @@ export default async function EquipmentActionPage({ searchParams }: PageProps) {
 	}
 
 	return (
-		<EquipmentForm
-			action={action}
-			equipment={equipment}
-		/>
+		<section className='p-4 md:p-6'>
+			<div className='mx-auto w-full max-w-2xl'>
+				<EquipmentForm
+					action={action}
+					equipment={equipment}
+				/>
+			</div>
+		</section>
 	);
 }

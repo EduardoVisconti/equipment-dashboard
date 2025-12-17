@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/core/tables/data-table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
 	AlertDialog,
-	AlertDialogTrigger,
 	AlertDialogContent,
 	AlertDialogHeader,
 	AlertDialogTitle,
@@ -33,29 +33,14 @@ import {
 export default function EquipmentsTableSection() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(
 		null
 	);
 
-	const deleteMutation = useMutation({
-		mutationFn: (id: string) => deleteEquipment(id),
-		onMutate: (id) => {
-			setDeletingId(id);
-		},
-		onSettled: () => {
-			setDeletingId(null);
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['equipments'] });
-			toast.success('Equipment deleted');
-		},
-		onError: () => {
-			toast.error('Failed to delete equipment');
-		}
-	});
-
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+	/* ---------------- DATA ---------------- */
 
 	const {
 		data = [],
@@ -66,22 +51,35 @@ export default function EquipmentsTableSection() {
 		queryFn: getEquipmentsList
 	});
 
+	/* ---------------- MUTATIONS ---------------- */
+
+	const deleteMutation = useMutation({
+		mutationFn: (id: string) => deleteEquipment(id),
+		onMutate: (id) => setDeletingId(id),
+		onSettled: () => setDeletingId(null),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['equipments'] });
+			toast.success('Equipment deleted');
+		},
+		onError: () => {
+			toast.error('Failed to delete equipment');
+		}
+	});
+
+	/* ---------------- HANDLERS ---------------- */
+
 	const handleEdit = (equipment: Equipment) => {
 		router.push(`/equipments/action?action=edit&id=${equipment.id}`);
 	};
 
-	const handleDelete = (equipment: Equipment) => {
-		deleteMutation.mutate(equipment.id);
-	};
+	/* ---------------- COLUMNS ---------------- */
 
 	const columns: ColumnDef<Equipment>[] = [
 		{ accessorKey: 'name', header: 'Name' },
 		{ accessorKey: 'serialNumber', header: 'Serial' },
 		{ accessorKey: 'status', header: 'Status' },
-
 		{
 			id: 'actions',
-			header: '',
 			cell: ({ row }) => {
 				const equipment = row.original;
 				const isDeleting = deletingId === equipment.id;
@@ -117,9 +115,44 @@ export default function EquipmentsTableSection() {
 		}
 	];
 
-	return (
+	/* ---------------- SKELETON ---------------- */
+
+	const TableSkeleton = () => (
 		<div className='space-y-4'>
 			<div className='flex justify-between'>
+				<Skeleton className='h-10 w-64' />
+				<Skeleton className='h-10 w-32' />
+			</div>
+
+			<div className='rounded-md border'>
+				<div className='divide-y'>
+					{Array.from({ length: 5 }).map((_, i) => (
+						<div
+							key={i}
+							className='flex items-center gap-4 p-4'
+						>
+							<Skeleton className='h-4 w-1/4' />
+							<Skeleton className='h-4 w-1/4' />
+							<Skeleton className='h-4 w-24' />
+							<Skeleton className='ml-auto h-8 w-8 rounded-full' />
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+
+	/* ---------------- LOADING ---------------- */
+
+	if (isLoading) {
+		return <TableSkeleton />;
+	}
+
+	/* ---------------- RENDER ---------------- */
+
+	return (
+		<div className='space-y-4'>
+			<div className='flex justify-between items-center'>
 				<Input
 					placeholder='Filter by name...'
 					value={
@@ -140,7 +173,7 @@ export default function EquipmentsTableSection() {
 				</Button>
 			</div>
 
-			{!isLoading && data.length === 0 && (
+			{data.length === 0 && (
 				<div className='flex flex-col items-center justify-center rounded-lg border border-dashed p-10 text-center'>
 					<div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
 						<Package className='h-6 w-6 text-muted-foreground' />
@@ -169,11 +202,10 @@ export default function EquipmentsTableSection() {
 					onColumnFiltersChange={setColumnFilters}
 				/>
 			)}
+
 			<AlertDialog
 				open={!!equipmentToDelete}
-				onOpenChange={(open) => {
-					if (!open) setEquipmentToDelete(null);
-				}}
+				onOpenChange={(open) => !open && setEquipmentToDelete(null)}
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
@@ -189,7 +221,6 @@ export default function EquipmentsTableSection() {
 						<AlertDialogCancel disabled={deleteMutation.isPending}>
 							Cancel
 						</AlertDialogCancel>
-
 						<AlertDialogAction
 							className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
 							disabled={deleteMutation.isPending}

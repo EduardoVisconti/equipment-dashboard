@@ -3,6 +3,7 @@ import './globals.css';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
 	title: 'Create Next App',
@@ -23,15 +24,17 @@ export default function RootLayout({
 	return (
 		<html lang='en'>
 			<body className={`${inter.variable}  antialiased`}>
-				<ThemeProvider
-					attribute='class'
-					defaultTheme='system'
-					enableSystem
-					disableTransitionOnChange
-				>
-					{children}
-				</ThemeProvider>
-				<Toaster richColors />
+				<AuthProvider>
+					<ThemeProvider
+						attribute='class'
+						defaultTheme='system'
+						enableSystem
+						disableTransitionOnChange
+					>
+						{children}
+					</ThemeProvider>
+					<Toaster richColors />
+				</AuthProvider>
 			</body>
 		</html>
 	);

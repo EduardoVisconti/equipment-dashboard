@@ -9,15 +9,39 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useState } from 'react';
 
-export function LoginForm({
-	className,
-	...props
-}: React.ComponentProps<'form'>) {
+export function LoginForm({ className }: React.ComponentProps<'form'>) {
+	const router = useRouter();
+	const [loading, setLoading] = useState(false);
+
+	async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		setLoading(true);
+
+		const formData = new FormData(e.currentTarget);
+		const email = formData.get('email') as string;
+		const password = formData.get('password') as string;
+
+		try {
+			await signInWithEmailAndPassword(auth, email, password);
+			toast.success('Logged in successfully');
+			router.push('/dashboard');
+		} catch (err) {
+			toast.error('Invalid email or password');
+		} finally {
+			setLoading(false);
+		}
+	}
+
 	return (
 		<form
+			onSubmit={onSubmit}
 			className={cn('flex flex-col gap-6', className)}
-			{...props}
 		>
 			<FieldGroup>
 				<div className='flex flex-col items-center gap-1 text-center'>
@@ -52,13 +76,12 @@ export function LoginForm({
 					/>
 				</Field>
 				<Field>
-					{/* <Button type='submit'>Login</Button> */}
-					<Link
-						href={'/dashboard'}
-						className={buttonVariants()}
+					<Button
+						type='submit'
+						disabled={loading}
 					>
-						Login
-					</Link>
+						{loading ? 'Logging in...' : 'Login'}
+					</Button>
 				</Field>
 				<FieldSeparator>Or continue with</FieldSeparator>
 				<Field>

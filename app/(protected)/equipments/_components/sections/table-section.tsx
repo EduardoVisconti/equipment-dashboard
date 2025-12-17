@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Package } from 'lucide-react';
 import { deleteEquipment, getEquipmentsList } from '@/data-access/equipments';
 import { Equipment } from '@/types/equipment';
 import { toast } from 'sonner';
@@ -140,12 +140,35 @@ export default function EquipmentsTableSection() {
 				</Button>
 			</div>
 
-			<DataTable
-				columns={columns}
-				data={data}
-				columnFilters={columnFilters}
-				onColumnFiltersChange={setColumnFilters}
-			/>
+			{!isLoading && data.length === 0 && (
+				<div className='flex flex-col items-center justify-center rounded-lg border border-dashed p-10 text-center'>
+					<div className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
+						<Package className='h-6 w-6 text-muted-foreground' />
+					</div>
+
+					<h3 className='mt-4 text-lg font-semibold'>No equipments found</h3>
+					<p className='mt-2 text-sm text-muted-foreground max-w-sm'>
+						You don&apos;t have any equipments yet. Create your first equipment
+						to start managing them here.
+					</p>
+
+					<Button
+						className='mt-6'
+						onClick={() => router.push('/equipments/action?action=add')}
+					>
+						Add equipment
+					</Button>
+				</div>
+			)}
+
+			{data.length > 0 && (
+				<DataTable
+					columns={columns}
+					data={data}
+					columnFilters={columnFilters}
+					onColumnFiltersChange={setColumnFilters}
+				/>
+			)}
 			<AlertDialog
 				open={!!equipmentToDelete}
 				onOpenChange={(open) => {

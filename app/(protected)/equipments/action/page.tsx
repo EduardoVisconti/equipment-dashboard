@@ -1,5 +1,5 @@
 import EquipmentForm from '../_components/form/equipment-form';
-import { getEquipmentsList } from '@/data-access/equipments';
+import { getEquipmentById } from '@/data-access/equipments';
 
 interface PageProps {
 	searchParams: {
@@ -11,12 +11,10 @@ interface PageProps {
 export default async function EquipmentActionPage({ searchParams }: PageProps) {
 	const action = searchParams.action ?? 'add';
 
-	let equipment = undefined;
-
-	if (action === 'edit' && searchParams.id) {
-		const data = await getEquipmentsList();
-		equipment = data?.id === searchParams.id ? data : undefined;
-	}
+	const equipment =
+		action === 'edit' && searchParams.id
+			? await getEquipmentById(searchParams.id)
+			: undefined;
 
 	return (
 		<section className='p-4 md:p-6'>

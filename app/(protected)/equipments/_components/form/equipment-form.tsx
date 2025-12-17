@@ -1,6 +1,8 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { createEquipment, updateEquipment } from '@/data-access/equipments';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -48,6 +50,8 @@ export default function EquipmentForm({
 	action,
 	equipment
 }: EquipmentFormProps) {
+	const router = useRouter();
+
 	const form = useForm<EquipmentFormValues>({
 		resolver: zodResolver(equipmentSchema),
 		defaultValues: {
@@ -59,17 +63,29 @@ export default function EquipmentForm({
 		}
 	});
 
-	function onSubmit(values: EquipmentFormValues) {
+	async function onSubmit(values: EquipmentFormValues) {
 		if (action === 'add') {
-			console.log('ADD EQUIPMENT', values);
-		}
-
-		if (action === 'edit') {
-			console.log('EDIT EQUIPMENT', {
-				id: equipment?.id,
-				...values
+			await createEquipment({
+				name: values.name,
+				serialNumber: values.serialNumber,
+				status: values.status,
+				purchaseDate: values.purchaseDate,
+				lastServiceDate: values.lastServiceDate
 			});
 		}
+
+		if (action === 'edit' && equipment?.id) {
+			await updateEquipment(equipment.id, {
+				name: values.name,
+				serialNumber: values.serialNumber,
+				status: values.status,
+				purchaseDate: values.purchaseDate,
+				lastServiceDate: values.lastServiceDate
+			});
+		}
+
+		router.push('/equipments');
+		router.refresh(); // garante refresh do mock/list em dev
 	}
 
 	return (

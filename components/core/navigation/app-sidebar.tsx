@@ -43,8 +43,8 @@ const data = {
 					url: '/equipments'
 				},
 				{
-					title: 'Starred',
-					url: '#'
+					title: 'Analytics',
+					url: '/analytics'
 				},
 				{
 					title: 'Settings',

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getEquipmentsList } from '@/data-access/equipments';
 import { Equipment } from '@/types/equipment';
+import { Cell } from 'recharts';
 
 import {
 	ChartContainer,
@@ -42,6 +43,12 @@ export default function AnalyticsPage() {
 			count
 		})
 	);
+
+	const STATUS_COLORS: Record<string, string> = {
+		active: '#22c55e',
+		inactive: '#eab308',
+		maintenance: '#ef4444'
+	};
 
 	/* ---------------- TIME SERIES DATA ---------------- */
 
@@ -83,7 +90,15 @@ export default function AnalyticsPage() {
 									dataKey='count'
 									nameKey='status'
 									innerRadius={60}
-								/>
+								>
+									{statusChartData.map((entry) => (
+										<Cell
+											key={entry.status}
+											fill={STATUS_COLORS[entry.status]}
+										/>
+									))}
+								</Pie>
+
 								<ChartTooltip content={<ChartTooltipContent />} />
 							</PieChart>
 						</ChartContainer>
@@ -109,7 +124,15 @@ export default function AnalyticsPage() {
 								<Bar
 									dataKey='count'
 									radius={4}
-								/>
+								>
+									{statusChartData.map((entry) => (
+										<Cell
+											key={entry.status}
+											fill={STATUS_COLORS[entry.status]}
+										/>
+									))}
+								</Bar>
+
 								<ChartTooltip content={<ChartTooltipContent />} />
 							</BarChart>
 						</ChartContainer>
@@ -136,8 +159,11 @@ export default function AnalyticsPage() {
 							<Area
 								dataKey='total'
 								type='monotone'
-								fillOpacity={0.3}
+								stroke='#6366f1'
+								fill='#6366f1'
+								fillOpacity={0.25}
 							/>
+
 							<ChartTooltip content={<ChartTooltipContent />} />
 						</AreaChart>
 					</ChartContainer>

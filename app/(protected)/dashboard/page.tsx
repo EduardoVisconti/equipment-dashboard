@@ -5,7 +5,7 @@ export default function Page() {
 		<section>
 			<PageHeader
 				pageTitle='Dashboard'
-				pageDescription='Welcome to your awesome shit'
+				pageDescription='Welcome to my awesome project dashboard'
 			/>
 			<div className='p-4'>
 				<p>

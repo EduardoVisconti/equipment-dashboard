@@ -3,13 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-	addDays,
-	isAfter,
-	isBefore,
-	isWithinInterval,
-	parseISO
-} from 'date-fns';
+import { addDays, isBefore, isWithinInterval, parseISO } from 'date-fns';
 import {
 	AlertTriangle,
 	CheckCircle2,
@@ -43,18 +37,10 @@ function safeDate(value?: string) {
 	}
 }
 
-/**
- * If nextServiceDate is missing, we derive it from lastServiceDate (+180d)
- * so the dashboard still works for demo purposes.
- */
-function deriveNextServiceDate(eq: Equipment) {
-	const next = safeDate((eq as any).nextServiceDate);
-	if (next) return next;
-
+function getNextServiceDate(eq: Equipment) {
 	const last = safeDate(eq.lastServiceDate);
-	if (last) return addDays(last, 180);
-
-	return null;
+	if (!last) return null;
+	return addDays(last, 180);
 }
 
 export default function DashboardPage() {
@@ -81,16 +67,17 @@ export default function DashboardPage() {
 			(e) => e.status === 'maintenance'
 		).length;
 
-		const withOwner = equipments.filter((e: any) =>
-			Boolean(e.owner?.trim())
+		// Data Quality (production-friendly, based on existing fields)
+		const withSerial = equipments.filter((e) =>
+			Boolean(e.serialNumber?.trim())
 		).length;
-		const withLocation = equipments.filter((e: any) =>
-			Boolean(e.location?.trim())
+		const withLastService = equipments.filter((e) =>
+			Boolean(e.lastServiceDate?.trim())
 		).length;
-		const compliance =
+		const quality =
 			total === 0
 				? 0
-				: Math.round((Math.min(withOwner, withLocation) / total) * 100);
+				: Math.round((Math.min(withSerial, withLastService) / total) * 100);
 
 		let overdue = 0;
 		let due7 = 0;
@@ -100,7 +87,7 @@ export default function DashboardPage() {
 			[];
 
 		for (const eq of equipments) {
-			const next = deriveNextServiceDate(eq);
+			const next = getNextServiceDate(eq);
 			if (!next) continue;
 
 			if (isBefore(next, today)) overdue += 1;
@@ -109,8 +96,8 @@ export default function DashboardPage() {
 			if (isWithinInterval(next, { start: today, end: in30 })) due30 += 1;
 
 			if (
-				isWithinInterval(next, { start: today, end: in30 }) ||
-				isBefore(next, today)
+				isBefore(next, today) ||
+				isWithinInterval(next, { start: today, end: in30 })
 			) {
 				dueSoonList.push({ ...eq, _nextServiceDate: next });
 			}
@@ -122,11 +109,6 @@ export default function DashboardPage() {
 			return ad - bd;
 		});
 
-		const missingOwner = equipments.filter((e: any) => !e.owner?.trim()).length;
-		const missingLocation = equipments.filter(
-			(e: any) => !e.location?.trim()
-		).length;
-
 		return {
 			total,
 			active,
@@ -135,20 +117,19 @@ export default function DashboardPage() {
 			overdue,
 			due7,
 			due30,
-			compliance,
-			missingOwner,
-			missingLocation,
+			quality,
 			dueSoonTop: dueSoonList.slice(0, 6)
 		};
-	}, [equipments]);
+	}, [equipments, today, in7, in30]);
 
-	const statusChartData = useMemo(() => {
-		return [
+	const statusChartData = useMemo(
+		() => [
 			{ status: 'active', count: metrics.active },
 			{ status: 'maintenance', count: metrics.maintenance },
 			{ status: 'inactive', count: metrics.inactive }
-		];
-	}, [metrics.active, metrics.maintenance, metrics.inactive]);
+		],
+		[metrics.active, metrics.maintenance, metrics.inactive]
+	);
 
 	if (isError) {
 		return (
@@ -235,7 +216,7 @@ export default function DashboardPage() {
 								title='Out of Service'
 								value={metrics.inactive}
 								icon={<AlertTriangle className='h-4 w-4' />}
-								footer='Inactive / retired items'
+								footer='Inactive items'
 							/>
 							<KpiCard
 								title='Maintenance Due (30d)'
@@ -256,10 +237,10 @@ export default function DashboardPage() {
 								badgeVariant={metrics.overdue > 0 ? 'destructive' : 'secondary'}
 							/>
 							<KpiCard
-								title='Coverage'
-								value={`${metrics.compliance}%`}
+								title='Data Quality'
+								value={`${metrics.quality}%`}
 								icon={<CheckCircle2 className='h-4 w-4' />}
-								footer='Owner + location completeness'
+								footer='Serial + last service completeness'
 							/>
 						</>
 					)}
@@ -267,7 +248,6 @@ export default function DashboardPage() {
 
 				{/* Alerts + Chart */}
 				<div className='grid gap-4 lg:grid-cols-3'>
-					{/* Alerts */}
 					<Card className='lg:col-span-2'>
 						<CardHeader>
 							<CardTitle>Priorities</CardTitle>
@@ -292,21 +272,15 @@ export default function DashboardPage() {
 										href='/equipments'
 									/>
 									<PriorityRow
-										label={`${metrics.missingOwner} assets missing owner`}
-										tone={metrics.missingOwner > 0 ? 'warning' : 'ok'}
-										href='/equipments'
-									/>
-									<PriorityRow
-										label={`${metrics.missingLocation} assets missing location`}
-										tone={metrics.missingLocation > 0 ? 'warning' : 'ok'}
-										href='/equipments'
+										label={`Service policy: every 180 days`}
+										tone='ok'
+										href='/analytics'
 									/>
 								</>
 							)}
 						</CardContent>
 					</Card>
 
-					{/* Status chart */}
 					<Card>
 						<CardHeader>
 							<CardTitle>Assets by Status</CardTitle>
@@ -328,7 +302,6 @@ export default function DashboardPage() {
 										innerRadius={55}
 										outerRadius={90}
 									>
-										{/* Explicit colors per slice */}
 										<Cell fill='#22c55e' />
 										<Cell fill='#eab308' />
 										<Cell fill='#ef4444' />
@@ -525,7 +498,6 @@ function PriorityRow({
 }
 
 function RecentActivity({ equipments }: { equipments: Equipment[] }) {
-	// If you have createdAt later, use it. For now: purchaseDate as "created".
 	const sorted = [...equipments].sort((a, b) => {
 		const ad = safeDate(a.purchaseDate)?.getTime() ?? 0;
 		const bd = safeDate(b.purchaseDate)?.getTime() ?? 0;

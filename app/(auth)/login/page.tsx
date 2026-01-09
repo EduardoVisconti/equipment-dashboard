@@ -13,9 +13,10 @@ export default function LoginPage() {
 						<div className='bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md'>
 							<GalleryVerticalEnd className='size-4' />
 						</div>
-						Acme Inc.
+						AssetOps
 					</a>
 				</div>
+				<p className='text-xs text-muted-foreground'>Operations Dashboard</p>
 				<div className='flex flex-1 items-center justify-center'>
 					<div className='w-full max-w-xs'>
 						<LoginForm />

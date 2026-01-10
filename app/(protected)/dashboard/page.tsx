@@ -34,9 +34,7 @@ function safeDate(value?: string) {
 }
 
 function getNextServiceDate(eq: Equipment) {
-	const last = safeDate(eq.lastServiceDate);
-	if (!last) return null;
-	return addDays(last, 180);
+	return safeDate((eq as any).nextServiceDate);
 }
 
 function StatusTooltip({

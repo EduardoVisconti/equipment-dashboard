@@ -1,5 +1,6 @@
 import { db } from '@/lib/firebase';
 import { Equipment } from '@/types/equipment';
+import type { MaintenanceRecord } from '@/types/maintenance';
 
 import {
 	collection,
@@ -9,7 +10,9 @@ import {
 	addDoc,
 	updateDoc,
 	deleteDoc,
-	serverTimestamp
+	serverTimestamp,
+	query,
+	orderBy
 } from 'firebase/firestore';
 
 const equipmentsCollection = collection(db, 'equipments');
@@ -113,4 +116,44 @@ export const updateEquipment = async (
 export const deleteEquipment = async (id: string): Promise<void> => {
 	const ref = doc(db, 'equipments', id);
 	await deleteDoc(ref);
+};
+
+function maintenanceCollection(equipmentId: string) {
+	return collection(db, 'equipments', equipmentId, 'maintenance');
+}
+
+export const getMaintenanceHistory = async (
+	equipmentId: string
+): Promise<MaintenanceRecord[]> => {
+	const q = query(
+		maintenanceCollection(equipmentId),
+		orderBy('date', 'desc'),
+		orderBy('createdAt', 'desc')
+	);
+
+	const snapshot = await getDocs(q);
+
+	return snapshot.docs.map((d) => ({
+		id: d.id,
+		...(d.data() as Omit<MaintenanceRecord, 'id'>)
+	}));
+};
+
+export const addMaintenanceRecord = async (
+	equipmentId: string,
+	data: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>,
+	actorId: string
+): Promise<void> => {
+	const payload: Omit<MaintenanceRecord, 'id'> & Record<string, any> = {
+		...data,
+		notes: data.notes?.trim() || undefined,
+		createdBy: actorId,
+		createdAt: serverTimestamp()
+	};
+
+	Object.keys(payload).forEach(
+		(k) => payload[k] === undefined && delete payload[k]
+	);
+
+	await addDoc(maintenanceCollection(equipmentId), payload);
 };

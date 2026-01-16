@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pencil } from 'lucide-react';
+import MaintenanceHistorySection from '../_components/sections/maintenance-history-section';
 
 import PageHeader from '@/components/core/headers/page-header';
 import { getEquipmentById } from '@/data-access/equipments';
@@ -287,6 +288,9 @@ export default function AssetDetailsPage({
 										Next service due is computed from the policy (last service +
 										180 days).
 									</p>
+									<div className='pt-2'>
+										<MaintenanceHistorySection equipmentId={asset.id} />
+									</div>
 								</div>
 							</TabsContent>
 

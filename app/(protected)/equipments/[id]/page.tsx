@@ -255,6 +255,10 @@ export default function AssetDetailsPage({
 										value={createdBy}
 									/>
 									<InfoCard
+										label='Created At'
+										value={createdAt}
+									/>
+									<InfoCard
 										label='Last Updated By'
 										value={updatedBy}
 									/>

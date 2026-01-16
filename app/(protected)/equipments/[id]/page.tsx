@@ -35,20 +35,18 @@ function truncateId(value: string, max = 14) {
 }
 
 function formatTimestamp(ts: Equipment['createdAt']): string {
-	// FieldValue exists only on write; when reading it should be a Timestamp-like object
-	// Safely handle missing/unknown shapes
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const maybe: any = ts;
+	if (!ts || typeof (ts as any).toDate !== 'function') return '—';
 
-	if (!maybe) return '—';
+	const date = (ts as any).toDate();
 
-	// Firestore Timestamp tem toDate()
-	if (typeof maybe.toDate === 'function') {
-		const d: Date = maybe.toDate();
-		return d.toLocaleString();
-	}
-
-	return '—';
+	return new Intl.DateTimeFormat('en-US', {
+		month: 'short',
+		day: '2-digit',
+		year: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true
+	}).format(date);
 }
 
 export default function AssetDetailsPage({

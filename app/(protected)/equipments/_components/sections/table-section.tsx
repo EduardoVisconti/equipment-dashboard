@@ -8,6 +8,7 @@ import { MoreHorizontal, Package } from 'lucide-react';
 import { deleteEquipment, getEquipmentsList } from '@/data-access/equipments';
 import { Equipment } from '@/types/equipment';
 import { toast } from 'sonner';
+import { useUserRole } from '@/hooks/use-user-role';
 
 import { DataTable } from '@/components/core/tables/data-table';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,7 @@ function StatusBadge({ status }: { status: Equipment['status'] }) {
 export default function EquipmentsTableSection() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+	const { isAdmin, isLoading: roleLoading } = useUserRole();
 
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -97,10 +99,8 @@ export default function EquipmentsTableSection() {
 		{
 			accessorKey: 'status',
 			header: 'Status',
-			// IMPORTANT: exact match (prevents "inactive" matching "active")
-			filterFn: (row, columnId, filterValue) => {
-				return row.getValue(columnId) === filterValue;
-			},
+			filterFn: (row, columnId, filterValue) =>
+				row.getValue(columnId) === filterValue,
 			cell: ({ row }) => <StatusBadge status={row.original.status} />
 		},
 		{
@@ -113,7 +113,9 @@ export default function EquipmentsTableSection() {
 				const equipment = row.original;
 				const isDeleting = deletingId === equipment.id;
 
-				const handleEdit = (equipment: Equipment) => {
+				const canWrite = !roleLoading && isAdmin;
+
+				const handleEdit = () => {
 					router.push(`/equipments/action?action=edit&id=${equipment.id}`);
 				};
 
@@ -123,25 +125,29 @@ export default function EquipmentsTableSection() {
 							<Button
 								variant='ghost'
 								size='icon'
+								disabled={roleLoading}
 							>
 								<MoreHorizontal className='h-4 w-4' />
 							</Button>
 						</DropdownMenuTrigger>
+
 						<DropdownMenuContent align='end'>
 							<DropdownMenuItem
 								onClick={() => router.push(`/equipments/${equipment.id}`)}
 							>
 								View
 							</DropdownMenuItem>
+
 							<DropdownMenuItem
-								disabled={isDeleting}
-								onClick={() => handleEdit(equipment)}
+								disabled={!canWrite || isDeleting}
+								onClick={handleEdit}
 							>
 								Edit
 							</DropdownMenuItem>
+
 							<DropdownMenuItem
 								className='text-destructive'
-								disabled={isDeleting}
+								disabled={!canWrite || isDeleting}
 								onClick={() => setEquipmentToDelete(equipment)}
 							>
 								Delete
@@ -176,6 +182,8 @@ export default function EquipmentsTableSection() {
 
 	/* ---------------- RENDER ---------------- */
 
+	const canWrite = !roleLoading && isAdmin;
+
 	return (
 		<div className='space-y-4'>
 			<div className='flex flex-wrap gap-4 items-center justify-between'>
@@ -196,9 +204,7 @@ export default function EquipmentsTableSection() {
 						onValueChange={(value) =>
 							setColumnFilters((prev) => {
 								const next = prev.filter((f) => f.id !== 'status');
-
 								if (value === 'all') return next;
-
 								return [...next, { id: 'status', value }];
 							})
 						}
@@ -215,7 +221,10 @@ export default function EquipmentsTableSection() {
 					</Select>
 				</div>
 
-				<Button onClick={() => router.push('/equipments/action?action=add')}>
+				<Button
+					disabled={!canWrite}
+					onClick={() => router.push('/equipments/action?action=add')}
+				>
 					Add asset
 				</Button>
 			</div>
@@ -235,10 +244,17 @@ export default function EquipmentsTableSection() {
 					</p>
 					<Button
 						className='mt-6'
+						disabled={!canWrite}
 						onClick={() => router.push('/equipments/action?action=add')}
 					>
 						Add asset
 					</Button>
+
+					{!canWrite && (
+						<p className='mt-3 text-xs text-muted-foreground'>
+							Viewer role: read-only access.
+						</p>
+					)}
 				</div>
 			) : (
 				<DataTable
@@ -265,6 +281,7 @@ export default function EquipmentsTableSection() {
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
 							className='bg-destructive'
+							disabled={!canWrite}
 							onClick={() => {
 								if (equipmentToDelete) {
 									deleteMutation.mutate(equipmentToDelete.id);

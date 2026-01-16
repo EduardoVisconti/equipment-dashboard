@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+import { useUserRole } from '@/hooks/use-user-role';
 import type { MaintenanceRecord } from '@/types/maintenance';
 import {
 	addMaintenanceRecord,
@@ -59,6 +60,11 @@ export default function MaintenanceHistorySection({
 }) {
 	const queryClient = useQueryClient();
 	const { user, loading } = useAuth();
+	const { isAdmin, isLoading: roleLoading } = useUserRole();
+
+	const isAuthBlocked = loading || !user;
+	const isRoleBlocked = roleLoading || !isAdmin;
+	const isBlocked = isAuthBlocked || isRoleBlocked;
 
 	const [showForm, setShowForm] = useState(false);
 
@@ -87,6 +93,8 @@ export default function MaintenanceHistorySection({
 	const addMutation = useMutation({
 		mutationFn: async (values: FormValues) => {
 			if (!user) throw new Error('Not authenticated');
+			if (!isAdmin) throw new Error('Not authorized');
+
 			const parsed = schema.parse(values);
 
 			await addMaintenanceRecord(
@@ -110,8 +118,19 @@ export default function MaintenanceHistorySection({
 		onError: () => toast.error('Failed to add maintenance record')
 	});
 
-	const isAuthBlocked = loading || !user;
 	const isSaving = addMutation.isPending;
+
+	function handleToggleForm() {
+		if (isBlocked) {
+			toast.error(
+				isAuthBlocked
+					? 'Sign in to add maintenance records.'
+					: 'Viewer role: read-only.'
+			);
+			return;
+		}
+		setShowForm((v) => !v);
+	}
 
 	return (
 		<div className='space-y-4'>
@@ -125,8 +144,8 @@ export default function MaintenanceHistorySection({
 
 				<Button
 					variant='outline'
-					disabled={isAuthBlocked}
-					onClick={() => setShowForm((v) => !v)}
+					disabled={isBlocked}
+					onClick={handleToggleForm}
 				>
 					{showForm ? 'Cancel' : 'Add record'}
 				</Button>
@@ -136,7 +155,17 @@ export default function MaintenanceHistorySection({
 				<div className='rounded-md border p-4 space-y-4'>
 					<Form {...form}>
 						<form
-							onSubmit={form.handleSubmit((v) => addMutation.mutate(v))}
+							onSubmit={form.handleSubmit((v) => {
+								if (isBlocked) {
+									toast.error(
+										isAuthBlocked
+											? 'Sign in to continue.'
+											: 'Viewer role: read-only.'
+									);
+									return;
+								}
+								addMutation.mutate(v);
+							})}
 							className='space-y-4'
 						>
 							<div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
@@ -149,7 +178,7 @@ export default function MaintenanceHistorySection({
 											<FormControl>
 												<Input
 													type='date'
-													disabled={isSaving}
+													disabled={isSaving || isBlocked}
 													{...field}
 												/>
 											</FormControl>
@@ -169,7 +198,7 @@ export default function MaintenanceHistorySection({
 												onValueChange={field.onChange}
 											>
 												<FormControl>
-													<SelectTrigger disabled={isSaving}>
+													<SelectTrigger disabled={isSaving || isBlocked}>
 														<SelectValue placeholder='Select type' />
 													</SelectTrigger>
 												</FormControl>
@@ -192,7 +221,7 @@ export default function MaintenanceHistorySection({
 										<FormLabel>Notes (optional)</FormLabel>
 										<FormControl>
 											<Input
-												disabled={isSaving}
+												disabled={isSaving || isBlocked}
 												placeholder='e.g. Replaced belt and calibrated sensor'
 												{...field}
 											/>
@@ -204,14 +233,14 @@ export default function MaintenanceHistorySection({
 
 							<Button
 								type='submit'
-								disabled={isSaving || isAuthBlocked}
+								disabled={isSaving || isBlocked}
 							>
 								{isSaving ? 'Saving...' : 'Save record'}
 							</Button>
 
-							{isAuthBlocked && (
+							{isRoleBlocked && !isAuthBlocked && (
 								<p className='text-xs text-muted-foreground'>
-									Sign in to add maintenance records.
+									Viewer role: you can view records, but cannot add new entries.
 								</p>
 							)}
 						</form>

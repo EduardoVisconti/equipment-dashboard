@@ -12,6 +12,7 @@ import type { Equipment } from '@/types/equipment';
 import { createEquipment, updateEquipment } from '@/data-access/equipments';
 
 import { useAuth } from '@/context/auth-context';
+import { useUserRole } from '@/hooks/use-user-role';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,7 +106,13 @@ export default function EquipmentForm({
 }: EquipmentFormProps) {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+
 	const { user, loading } = useAuth();
+	const { isAdmin, isLoading: roleLoading } = useUserRole();
+
+	const isAuthBlocked = loading || !user;
+	const isRoleBlocked = roleLoading || !isAdmin;
+	const isBlocked = isAuthBlocked || isRoleBlocked;
 
 	const form = useForm<EquipmentFormValues>({
 		resolver: zodResolver(equipmentSchema),
@@ -130,6 +137,7 @@ export default function EquipmentForm({
 	const createMutation = useMutation({
 		mutationFn: async (payload: Omit<Equipment, 'id'>) => {
 			if (!user) throw new Error('Not authenticated');
+			if (!isAdmin) throw new Error('Not authorized');
 			await createEquipment(payload, user.uid);
 		},
 		onSuccess: () => {
@@ -149,6 +157,7 @@ export default function EquipmentForm({
 			data: Omit<Equipment, 'id'>;
 		}) => {
 			if (!user) throw new Error('Not authenticated');
+			if (!isAdmin) throw new Error('Not authorized');
 			await updateEquipment(id, data, user.uid);
 		},
 		onSuccess: () => {
@@ -162,11 +171,13 @@ export default function EquipmentForm({
 	const isSaving =
 		action === 'add' ? createMutation.isPending : updateMutation.isPending;
 
-	const isAuthBlocked = loading || !user;
-
 	function onSubmit(values: EquipmentFormValues) {
 		if (isAuthBlocked) {
 			toast.error('You must be signed in to perform this action.');
+			return;
+		}
+		if (isRoleBlocked) {
+			toast.error('You do not have permission to perform this action.');
 			return;
 		}
 
@@ -219,7 +230,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving || isAuthBlocked}
+									disabled={isSaving || isBlocked}
 									placeholder='e.g. Hydraulic Dock Lift – Bay 1'
 								/>
 							</FormControl>
@@ -237,7 +248,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving || isAuthBlocked}
+									disabled={isSaving || isBlocked}
 									placeholder='e.g. FL-TAM-DOCK-HYD-0001'
 								/>
 							</FormControl>
@@ -257,7 +268,7 @@ export default function EquipmentForm({
 								value={field.value}
 							>
 								<FormControl>
-									<SelectTrigger disabled={isSaving || isAuthBlocked}>
+									<SelectTrigger disabled={isSaving || isBlocked}>
 										<SelectValue placeholder='Select status' />
 									</SelectTrigger>
 								</FormControl>
@@ -282,7 +293,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving || isAuthBlocked}
+										disabled={isSaving || isBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -300,7 +311,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving || isAuthBlocked}
+										disabled={isSaving || isBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -320,7 +331,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving || isAuthBlocked}
+										disabled={isSaving || isBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -340,7 +351,7 @@ export default function EquipmentForm({
 										type='number'
 										min={1}
 										step={1}
-										disabled={isSaving || isAuthBlocked}
+										disabled={isSaving || isBlocked}
 										value={field.value ?? 180}
 										onChange={(e) => field.onChange(e.target.value)}
 									/>
@@ -360,7 +371,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving || isAuthBlocked}
+									disabled={isSaving || isBlocked}
 									placeholder='e.g. Tampa DC'
 								/>
 							</FormControl>
@@ -378,7 +389,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving || isAuthBlocked}
+									disabled={isSaving || isBlocked}
 									placeholder='e.g. Operations Team'
 								/>
 							</FormControl>
@@ -389,7 +400,7 @@ export default function EquipmentForm({
 
 				<Button
 					type='submit'
-					disabled={isSaving || isAuthBlocked}
+					disabled={isSaving || isBlocked}
 				>
 					{isSaving
 						? action === 'add'
@@ -399,6 +410,12 @@ export default function EquipmentForm({
 						? 'Create Asset'
 						: 'Update Asset'}
 				</Button>
+
+				{!isSaving && isRoleBlocked && !isAuthBlocked && (
+					<p className='text-xs text-muted-foreground'>
+						Viewer role: you can view assets, but cannot create or edit.
+					</p>
+				)}
 			</form>
 		</Form>
 	);

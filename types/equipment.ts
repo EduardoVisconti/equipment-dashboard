@@ -21,4 +21,7 @@ export interface Equipment {
 	// ✅ Firestore timestamps (when writing, serverTimestamp() is FieldValue)
 	createdAt?: Timestamp | FieldValue;
 	updatedAt?: Timestamp | FieldValue;
+
+	createdBy?: string;
+	updatedBy?: string;
 }

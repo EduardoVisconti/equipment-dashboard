@@ -28,6 +28,29 @@ function statusLabel(status: Equipment['status']) {
 	return 'Out of Service';
 }
 
+function truncateId(value: string, max = 14) {
+	if (!value) return '—';
+	if (value.length <= max) return value;
+	return `${value.slice(0, 6)}…${value.slice(-4)}`;
+}
+
+function formatTimestamp(ts: Equipment['createdAt']): string {
+	// FieldValue exists only on write; when reading it should be a Timestamp-like object
+	// Safely handle missing/unknown shapes
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const maybe: any = ts;
+
+	if (!maybe) return '—';
+
+	// Firestore Timestamp tem toDate()
+	if (typeof maybe.toDate === 'function') {
+		const d: Date = maybe.toDate();
+		return d.toLocaleString();
+	}
+
+	return '—';
+}
+
 export default function AssetDetailsPage({
 	params
 }: {
@@ -130,6 +153,11 @@ export default function AssetDetailsPage({
 		);
 	}
 
+	const createdBy = asset.createdBy ? truncateId(asset.createdBy) : '—';
+	const updatedBy = asset.updatedBy ? truncateId(asset.updatedBy) : '—';
+	const createdAt = formatTimestamp(asset.createdAt);
+	const updatedAt = formatTimestamp(asset.updatedAt);
+
 	return (
 		<section>
 			<PageHeader
@@ -220,6 +248,20 @@ export default function AssetDetailsPage({
 										label='Record Source'
 										value='Firestore'
 									/>
+
+									{/* Audit trail */}
+									<InfoCard
+										label='Created By'
+										value={createdBy}
+									/>
+									<InfoCard
+										label='Last Updated By'
+										value={updatedBy}
+									/>
+									<InfoCard
+										label='Last Updated'
+										value={updatedAt}
+									/>
 								</div>
 							</TabsContent>
 
@@ -251,18 +293,17 @@ export default function AssetDetailsPage({
 								className='space-y-3'
 							>
 								<p className='text-sm text-muted-foreground'>
-									Activity is derived from current fields for now
-									(production-style placeholder).
+									Lightweight audit trail derived from system metadata (v1).
 								</p>
 
 								<div className='space-y-2'>
 									<ActivityRow
 										title='Asset created'
-										subtitle={`Purchase date: ${asset.purchaseDate || '—'}`}
+										subtitle={`Created by: ${createdBy} • ${createdAt}`}
 									/>
 									<ActivityRow
-										title='Status set'
-										subtitle={`Current status: ${statusLabel(asset.status)}`}
+										title='Last updated'
+										subtitle={`Updated by: ${updatedBy} • ${updatedAt}`}
 									/>
 									<ActivityRow
 										title='Last serviced'

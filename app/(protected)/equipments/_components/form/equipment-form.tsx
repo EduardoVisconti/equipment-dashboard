@@ -11,6 +11,8 @@ import { addDays, format, isAfter, isBefore, parseISO } from 'date-fns';
 import type { Equipment } from '@/types/equipment';
 import { createEquipment, updateEquipment } from '@/data-access/equipments';
 
+import { useAuth } from '@/context/auth-context';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,11 +49,8 @@ const equipmentSchema = z
 		purchaseDate: z.string().min(1, 'Purchase date is required'),
 		lastServiceDate: z.string().min(1, 'Last service date is required'),
 
-		// pode ficar vazio -> vira undefined no payload
 		nextServiceDate: z.string().optional(),
 
-		// input type=number chega como string -> coerce resolve
-		// default deixa o INPUT aceitar undefined, mas o OUTPUT vira number
 		serviceIntervalDays: z.coerce.number().int().min(1).default(180),
 
 		location: z.string().optional(),
@@ -95,9 +94,7 @@ const equipmentSchema = z
 		}
 	});
 
-// ✅ Form usa o INPUT (o que vem do usuário)
 type EquipmentFormValues = z.input<typeof equipmentSchema>;
-// ✅ Output (após parse) tem defaults aplicados
 type EquipmentParsedValues = z.output<typeof equipmentSchema>;
 
 /* ---------------- FORM ---------------- */
@@ -108,6 +105,7 @@ export default function EquipmentForm({
 }: EquipmentFormProps) {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+	const { user, loading } = useAuth();
 
 	const form = useForm<EquipmentFormValues>({
 		resolver: zodResolver(equipmentSchema),
@@ -121,7 +119,6 @@ export default function EquipmentForm({
 
 			nextServiceDate: equipment?.nextServiceDate ?? '',
 
-			// aqui pode ser número, o schema coerce/default garante o resto
 			serviceIntervalDays: equipment?.serviceIntervalDays ?? 180,
 
 			location: equipment?.location ?? '',
@@ -131,7 +128,10 @@ export default function EquipmentForm({
 	});
 
 	const createMutation = useMutation({
-		mutationFn: createEquipment,
+		mutationFn: async (payload: Omit<Equipment, 'id'>) => {
+			if (!user) throw new Error('Not authenticated');
+			await createEquipment(payload, user.uid);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['equipments'] });
 			toast.success('Equipment created successfully');
@@ -141,8 +141,16 @@ export default function EquipmentForm({
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: ({ id, data }: { id: string; data: Omit<Equipment, 'id'> }) =>
-			updateEquipment(id, data),
+		mutationFn: async ({
+			id,
+			data
+		}: {
+			id: string;
+			data: Omit<Equipment, 'id'>;
+		}) => {
+			if (!user) throw new Error('Not authenticated');
+			await updateEquipment(id, data, user.uid);
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['equipments'] });
 			toast.success('Equipment updated successfully');
@@ -154,8 +162,14 @@ export default function EquipmentForm({
 	const isSaving =
 		action === 'add' ? createMutation.isPending : updateMutation.isPending;
 
+	const isAuthBlocked = loading || !user;
+
 	function onSubmit(values: EquipmentFormValues) {
-		// ✅ aqui resolve TUDO: aplica default e garante types certinhos
+		if (isAuthBlocked) {
+			toast.error('You must be signed in to perform this action.');
+			return;
+		}
+
 		const parsed: EquipmentParsedValues = equipmentSchema.parse(values);
 
 		const interval = parsed.serviceIntervalDays;
@@ -205,7 +219,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving}
+									disabled={isSaving || isAuthBlocked}
 									placeholder='e.g. Hydraulic Dock Lift – Bay 1'
 								/>
 							</FormControl>
@@ -223,7 +237,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving}
+									disabled={isSaving || isAuthBlocked}
 									placeholder='e.g. FL-TAM-DOCK-HYD-0001'
 								/>
 							</FormControl>
@@ -243,7 +257,7 @@ export default function EquipmentForm({
 								value={field.value}
 							>
 								<FormControl>
-									<SelectTrigger disabled={isSaving}>
+									<SelectTrigger disabled={isSaving || isAuthBlocked}>
 										<SelectValue placeholder='Select status' />
 									</SelectTrigger>
 								</FormControl>
@@ -268,7 +282,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving}
+										disabled={isSaving || isAuthBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -286,7 +300,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving}
+										disabled={isSaving || isAuthBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -306,7 +320,7 @@ export default function EquipmentForm({
 								<FormControl>
 									<Input
 										type='date'
-										disabled={isSaving}
+										disabled={isSaving || isAuthBlocked}
 										{...field}
 									/>
 								</FormControl>
@@ -326,9 +340,8 @@ export default function EquipmentForm({
 										type='number'
 										min={1}
 										step={1}
-										disabled={isSaving}
+										disabled={isSaving || isAuthBlocked}
 										value={field.value ?? 180}
-										// manda string mesmo, o schema faz coerce
 										onChange={(e) => field.onChange(e.target.value)}
 									/>
 								</FormControl>
@@ -347,7 +360,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving}
+									disabled={isSaving || isAuthBlocked}
 									placeholder='e.g. Tampa DC'
 								/>
 							</FormControl>
@@ -365,7 +378,7 @@ export default function EquipmentForm({
 							<FormControl>
 								<Input
 									{...field}
-									disabled={isSaving}
+									disabled={isSaving || isAuthBlocked}
 									placeholder='e.g. Operations Team'
 								/>
 							</FormControl>
@@ -376,7 +389,7 @@ export default function EquipmentForm({
 
 				<Button
 					type='submit'
-					disabled={isSaving}
+					disabled={isSaving || isAuthBlocked}
 				>
 					{isSaving
 						? action === 'add'

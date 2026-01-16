@@ -49,7 +49,8 @@ export const getEquipmentById = async (
 };
 
 export const createEquipment = async (
-	data: Omit<Equipment, 'id'>
+	data: Omit<Equipment, 'id'>,
+	actorId: string
 ): Promise<void> => {
 	const interval = data.serviceIntervalDays ?? 180;
 
@@ -62,6 +63,8 @@ export const createEquipment = async (
 
 	const payload: Omit<Equipment, 'id'> & Record<string, any> = {
 		...data,
+		createdBy: actorId,
+		updatedBy: actorId,
 		serviceIntervalDays: interval,
 		nextServiceDate: next,
 		createdAt: serverTimestamp(),
@@ -78,7 +81,8 @@ export const createEquipment = async (
 
 export const updateEquipment = async (
 	id: string,
-	data: Omit<Equipment, 'id'>
+	data: Omit<Equipment, 'id'>,
+	actorId: string
 ): Promise<void> => {
 	const ref = doc(db, 'equipments', id);
 
@@ -93,6 +97,7 @@ export const updateEquipment = async (
 
 	const payload: Omit<Equipment, 'id'> & Record<string, any> = {
 		...data,
+		updatedBy: actorId,
 		serviceIntervalDays: interval,
 		nextServiceDate: next,
 		updatedAt: serverTimestamp()

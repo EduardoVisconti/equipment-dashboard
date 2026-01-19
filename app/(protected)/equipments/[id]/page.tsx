@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import MaintenanceHistorySection from '../_components/sections/maintenance-history-section';
-
+import ActivityFeedSection from '../_components/sections/activity-feed-section';
 import PageHeader from '@/components/core/headers/page-header';
 import { getEquipmentById } from '@/data-access/equipments';
 import type { Equipment } from '@/types/equipment';
@@ -359,8 +359,10 @@ export default function AssetDetailsPage({
 								className='space-y-3'
 							>
 								<p className='text-sm text-muted-foreground'>
-									Lightweight audit trail derived from system metadata (v1).
+									System activity feed for this asset (v1).
 								</p>
+
+								<ActivityFeedSection equipmentId={asset.id} />
 
 								<div className='space-y-2'>
 									<ActivityRow

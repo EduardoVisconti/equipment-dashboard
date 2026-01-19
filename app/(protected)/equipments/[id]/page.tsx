@@ -1,5 +1,6 @@
 'use client';
 
+import type { Timestamp, FieldValue } from 'firebase/firestore';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -29,16 +30,21 @@ function statusLabel(status: Equipment['status']) {
 	return 'Out of Service';
 }
 
-function truncateId(value: string, max = 14) {
+function truncateId(value?: string, max = 14) {
 	if (!value) return '—';
 	if (value.length <= max) return value;
 	return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }
 
-function formatTimestamp(ts: Equipment['createdAt']): string {
-	if (!ts || typeof (ts as any).toDate !== 'function') return '—';
+function formatTimestamp(ts?: Timestamp | FieldValue): string {
+	// serverTimestamp() when read should arrive as Timestamp,
+	// but keep it defensive for enterprise-grade resiliency.
+	if (!ts) return '—';
 
-	const date = (ts as any).toDate();
+	const maybe = ts as unknown as { toDate?: () => Date };
+	if (typeof maybe.toDate !== 'function') return '—';
+
+	const date = maybe.toDate();
 
 	return new Intl.DateTimeFormat('en-US', {
 		month: 'short',
@@ -152,14 +158,23 @@ export default function AssetDetailsPage({
 		);
 	}
 
+	const isArchived = Boolean(asset.archivedAt);
+
 	const createdBy =
-		asset.createdByEmail ||
+		asset.createdByEmail?.trim() ||
 		(asset.createdBy ? truncateId(asset.createdBy) : '—');
+
 	const updatedBy =
-		asset.updatedByEmail ||
+		asset.updatedByEmail?.trim() ||
 		(asset.updatedBy ? truncateId(asset.updatedBy) : '—');
+
+	const archivedBy =
+		asset.archivedByEmail?.trim() ||
+		(asset.archivedBy ? truncateId(asset.archivedBy) : '—');
+
 	const createdAt = formatTimestamp(asset.createdAt);
 	const updatedAt = formatTimestamp(asset.updatedAt);
+	const archivedAt = formatTimestamp(asset.archivedAt);
 
 	return (
 		<section>
@@ -185,10 +200,21 @@ export default function AssetDetailsPage({
 						<div className='min-w-0'>
 							<div className='flex items-center gap-2'>
 								<h2 className='text-lg font-semibold truncate'>{asset.name}</h2>
+
 								<Badge variant={statusBadgeVariant(asset.status)}>
 									{statusLabel(asset.status)}
 								</Badge>
+
+								{isArchived && (
+									<Badge
+										variant='outline'
+										className='bg-muted text-muted-foreground'
+									>
+										Archived
+									</Badge>
+								)}
 							</div>
+
 							<p className='text-xs text-muted-foreground truncate'>
 								Serial: {asset.serialNumber || '—'} • Asset ID: {asset.id}
 							</p>
@@ -199,14 +225,30 @@ export default function AssetDetailsPage({
 						<Button
 							variant='outline'
 							asChild
+							disabled={isArchived}
 						>
-							<Link href={`/equipments/action?action=edit&id=${asset.id}`}>
+							<Link
+								aria-disabled={isArchived}
+								href={`/equipments/action?action=edit&id=${asset.id}`}
+								onClick={(e) => {
+									if (isArchived) e.preventDefault();
+								}}
+							>
 								<Pencil className='h-4 w-4 mr-2' />
-								Edit asset
+								{isArchived ? 'Read-only' : 'Edit asset'}
 							</Link>
 						</Button>
 					</div>
 				</div>
+
+				{isArchived && (
+					<div className='rounded-md border bg-muted/30 p-4'>
+						<p className='text-sm font-medium'>This asset is archived</p>
+						<p className='text-xs text-muted-foreground mt-1'>
+							Archived assets are read-only and cannot be edited in AssetOps v1.
+						</p>
+					</div>
+				)}
 
 				<Card>
 					<CardHeader>
@@ -269,6 +311,20 @@ export default function AssetDetailsPage({
 										label='Last Updated'
 										value={updatedAt}
 									/>
+
+									{/* Archive metadata (only when archived) */}
+									{isArchived && (
+										<>
+											<InfoCard
+												label='Archived By'
+												value={archivedBy}
+											/>
+											<InfoCard
+												label='Archived At'
+												value={archivedAt}
+											/>
+										</>
+									)}
 								</div>
 							</TabsContent>
 
@@ -315,11 +371,17 @@ export default function AssetDetailsPage({
 										title='Last updated'
 										subtitle={`Updated by: ${updatedBy} • ${updatedAt}`}
 									/>
+
+									{isArchived && (
+										<ActivityRow
+											title='Asset archived'
+											subtitle={`Archived by: ${archivedBy} • ${archivedAt}`}
+										/>
+									)}
+
 									<ActivityRow
 										title='Last serviced'
-										subtitle={`Last service date: ${
-											asset.lastServiceDate || '—'
-										}`}
+										subtitle={`Last service date: ${asset.lastServiceDate || '—'}`}
 									/>
 								</div>
 							</TabsContent>

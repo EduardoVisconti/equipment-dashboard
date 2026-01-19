@@ -26,4 +26,8 @@ export interface Equipment {
 
 	updatedBy?: string;
 	updatedByEmail?: string;
+
+	archivedAt?: Timestamp | FieldValue;
+	archivedBy?: string;
+	archivedByEmail?: string | null;
 }

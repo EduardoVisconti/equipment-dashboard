@@ -122,6 +122,42 @@ export const deleteEquipment = async (id: string): Promise<void> => {
 	await deleteDoc(ref);
 };
 
+export const archiveEquipment = async (
+	id: string,
+	actor: { uid: string; email?: string | null }
+): Promise<void> => {
+	const ref = doc(db, 'equipments', id);
+
+	const payload: Record<string, any> = {
+		archivedAt: serverTimestamp(),
+		archivedBy: actor.uid,
+		archivedByEmail: actor.email ?? null,
+		updatedBy: actor.uid,
+		updatedByEmail: actor.email ?? null,
+		updatedAt: serverTimestamp()
+	};
+
+	await updateDoc(ref, payload);
+};
+
+export const unarchiveEquipment = async (
+	id: string,
+	actor: { uid: string; email?: string | null }
+): Promise<void> => {
+	const ref = doc(db, 'equipments', id);
+
+	const payload: Record<string, any> = {
+		archivedAt: null,
+		archivedBy: null,
+		archivedByEmail: null,
+		updatedBy: actor.uid,
+		updatedByEmail: actor.email ?? null,
+		updatedAt: serverTimestamp()
+	};
+
+	await updateDoc(ref, payload);
+};
+
 function maintenanceCollection(equipmentId: string) {
 	return collection(db, 'equipments', equipmentId, 'maintenance');
 }

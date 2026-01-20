@@ -26,7 +26,7 @@ import {
 
 import PageHeader from '@/components/core/headers/page-header';
 import { getEquipmentsList } from '@/data-access/equipments';
-import { Equipment } from '@/types/equipment';
+import type { Equipment } from '@/types/equipment';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +88,10 @@ function safeDate(value?: string) {
 	}
 }
 
+function isArchived(eq: Equipment) {
+	return Boolean((eq as any)?.archivedAt);
+}
+
 function getCreatedAt(eq: Equipment) {
 	const anyEq = eq as any;
 
@@ -103,20 +107,6 @@ function getCreatedAt(eq: Equipment) {
 		}
 	}
 
-	return null;
-}
-
-function toDateAny(value: any): Date | null {
-	if (!value) return null;
-	if (value?.toDate && typeof value.toDate === 'function')
-		return value.toDate(); // Firestore Timestamp
-	if (typeof value === 'string') {
-		try {
-			return parseISO(value);
-		} catch {
-			return null;
-		}
-	}
 	return null;
 }
 
@@ -140,8 +130,8 @@ function StatusPill({ status }: { status: Equipment['status'] }) {
 		status === 'active'
 			? 'bg-green-100 text-green-700 border-green-200'
 			: status === 'maintenance'
-			? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-			: 'bg-red-100 text-red-700 border-red-200';
+				? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+				: 'bg-red-100 text-red-700 border-red-200';
 
 	return (
 		<Badge
@@ -232,6 +222,7 @@ function CompactTooltip({
 export default function AnalyticsPage() {
 	const [timeRange, setTimeRange] = useState<TimeRange>('365');
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+	const [includeArchived, setIncludeArchived] = useState(false);
 
 	const {
 		data: equipments = [],
@@ -249,8 +240,17 @@ export default function AnalyticsPage() {
 		return subDays(today, Number(timeRange));
 	}, [today, timeRange]);
 
+	// previous period for comparison (same duration right before rangeStart)
+	const prevRangeStart = useMemo(() => {
+		return subDays(rangeStart, Number(timeRange));
+	}, [rangeStart, timeRange]);
+
+	const prevRangeEnd = rangeStart;
+
 	const filtered = useMemo(() => {
 		return equipments.filter((eq) => {
+			if (!includeArchived && isArchived(eq)) return false;
+
 			const created = getCreatedAt(eq);
 			const inRange =
 				!created ||
@@ -261,7 +261,23 @@ export default function AnalyticsPage() {
 
 			return inRange && statusOk;
 		});
-	}, [equipments, rangeStart, today, statusFilter]);
+	}, [equipments, rangeStart, today, statusFilter, includeArchived]);
+
+	const filteredPrev = useMemo(() => {
+		return equipments.filter((eq) => {
+			if (!includeArchived && isArchived(eq)) return false;
+
+			const created = getCreatedAt(eq);
+			const inPrev =
+				!created ||
+				isWithinInterval(created, { start: prevRangeStart, end: prevRangeEnd });
+
+			const statusOk =
+				statusFilter === 'all' ? true : eq.status === statusFilter;
+
+			return inPrev && statusOk;
+		});
+	}, [equipments, prevRangeStart, prevRangeEnd, statusFilter, includeArchived]);
 
 	const kpis = useMemo(() => {
 		const total = filtered.length;
@@ -274,6 +290,23 @@ export default function AnalyticsPage() {
 		return { total, active, maintenance, inactive };
 	}, [filtered]);
 
+	const kpisPrev = useMemo(() => {
+		const total = filteredPrev.length;
+		const active = filteredPrev.filter((e) => e.status === 'active').length;
+		const maintenance = filteredPrev.filter(
+			(e) => e.status === 'maintenance'
+		).length;
+		const inactive = filteredPrev.filter((e) => e.status === 'inactive').length;
+
+		return { total, active, maintenance, inactive };
+	}, [filteredPrev]);
+
+	function deltaBadge(current: number, prev: number) {
+		const diff = current - prev;
+		if (diff === 0) return 'No change';
+		return diff > 0 ? `+${diff} vs prev` : `${diff} vs prev`;
+	}
+
 	const statusChartData = useMemo(() => {
 		return (['active', 'maintenance', 'inactive'] as const).map((status) => ({
 			status,
@@ -282,8 +315,8 @@ export default function AnalyticsPage() {
 				status === 'active'
 					? kpis.active
 					: status === 'maintenance'
-					? kpis.maintenance
-					: kpis.inactive
+						? kpis.maintenance
+						: kpis.inactive
 		}));
 	}, [kpis.active, kpis.maintenance, kpis.inactive]);
 
@@ -326,19 +359,42 @@ export default function AnalyticsPage() {
 		return { overdue, due7, due30, dueSoonTop: dueSoon.slice(0, 6) };
 	}, [filtered, today]);
 
+	const maintenanceMetricsPrev = useMemo(() => {
+		let overdue = 0;
+		let due7 = 0;
+		let due30 = 0;
+
+		const in7 = addDays(today, 7);
+		const in30 = addDays(today, 30);
+
+		for (const eq of filteredPrev) {
+			const next = deriveNextServiceDate(eq);
+			if (!next) continue;
+
+			if (isBefore(next, today)) overdue += 1;
+			if (isWithinInterval(next, { start: today, end: in7 })) due7 += 1;
+			if (isWithinInterval(next, { start: today, end: in30 })) due30 += 1;
+		}
+
+		return { overdue, due7, due30 };
+	}, [filteredPrev, today]);
+
 	const timeSeriesData = useMemo(() => {
 		const start = subDays(today, 365);
 		const months = eachMonthOfInterval({ start, end: today }).map((d) =>
 			format(d, 'yyyy-MM')
 		);
 
-		const counts = filtered.reduce((acc, eq) => {
-			const created = getCreatedAt(eq);
-			if (!created) return acc;
-			const month = format(created, 'yyyy-MM');
-			acc[month] = (acc[month] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
+		const counts = filtered.reduce(
+			(acc, eq) => {
+				const created = getCreatedAt(eq);
+				if (!created) return acc;
+				const month = format(created, 'yyyy-MM');
+				acc[month] = (acc[month] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>
+		);
 
 		return months.map((month) => ({ month, total: counts[month] ?? 0 }));
 	}, [filtered, today]);
@@ -365,8 +421,18 @@ export default function AnalyticsPage() {
 		const activePct = Math.round((kpis.active / Math.max(kpis.total, 1)) * 100);
 		lines.push(`${activePct}% of assets are currently in service.`);
 
+		if (includeArchived) {
+			lines.push('Archived assets are included in this view.');
+		}
+
 		return lines;
-	}, [kpis, maintenanceMetrics]);
+	}, [kpis, maintenanceMetrics, includeArchived]);
+
+	function resetFilters() {
+		setTimeRange('365');
+		setStatusFilter('all');
+		setIncludeArchived(false);
+	}
 
 	if (isError) {
 		return (
@@ -437,7 +503,31 @@ export default function AnalyticsPage() {
 									<SelectItem value='inactive'>Out of Service</SelectItem>
 								</SelectContent>
 							</Select>
+
+							<Button
+								variant='outline'
+								onClick={() => setIncludeArchived((v) => !v)}
+							>
+								{includeArchived ? 'Hide archived' : 'Include archived'}
+							</Button>
+
+							<Button
+								variant='ghost'
+								onClick={resetFilters}
+							>
+								Reset
+							</Button>
 						</div>
+
+						<p className='text-xs text-muted-foreground'>
+							Scope: last {timeRange} days •{' '}
+							{statusFilter === 'all'
+								? 'All statuses'
+								: STATUS_LABEL[statusFilter]}
+							{includeArchived
+								? ' • Includes archived'
+								: ' • Excludes archived'}
+						</p>
 					</div>
 
 					<div className='flex gap-2'>
@@ -477,37 +567,46 @@ export default function AnalyticsPage() {
 								value={kpis.total}
 								icon={<BarChart3 className='h-4 w-4' />}
 								footer={`Based on current filters (${timeRange}d)`}
+								badge={deltaBadge(kpis.total, kpisPrev.total)}
+								badgeVariant='outline'
 							/>
+
 							<KpiCard
 								title='In service'
 								value={kpis.active}
 								icon={<CheckCircle2 className='h-4 w-4' />}
 								footer='Operational availability'
+								badge={deltaBadge(kpis.active, kpisPrev.active)}
+								badgeVariant='outline'
 							/>
+
 							<KpiCard
 								title='Maintenance due (30d)'
 								value={maintenanceMetrics.due30}
 								icon={<Clock className='h-4 w-4' />}
 								footer='Upcoming service window'
-								badge={
-									maintenanceMetrics.due7 > 0
-										? `${maintenanceMetrics.due7} due in 7d`
-										: undefined
-								}
+								badge={deltaBadge(
+									maintenanceMetrics.due30,
+									maintenanceMetricsPrev.due30
+								)}
 								badgeVariant={
-									maintenanceMetrics.due7 > 0 ? 'destructive' : 'secondary'
+									maintenanceMetrics.due30 > maintenanceMetricsPrev.due30
+										? 'destructive'
+										: 'outline'
 								}
 							/>
+
 							<KpiCard
 								title='Overdue'
 								value={maintenanceMetrics.overdue}
 								icon={<Wrench className='h-4 w-4' />}
 								footer='Past due maintenance'
-								badge={
-									maintenanceMetrics.overdue > 0 ? 'Action required' : 'Healthy'
-								}
+								badge={deltaBadge(
+									maintenanceMetrics.overdue,
+									maintenanceMetricsPrev.overdue
+								)}
 								badgeVariant={
-									maintenanceMetrics.overdue > 0 ? 'destructive' : 'secondary'
+									maintenanceMetrics.overdue > 0 ? 'destructive' : 'outline'
 								}
 							/>
 						</>
@@ -571,10 +670,29 @@ export default function AnalyticsPage() {
 							</ChartContainer>
 
 							{!isLoading && kpis.total === 0 ? (
-								<p className='mt-3 text-xs text-muted-foreground'>
-									No data for the selected filters. Try expanding the time
-									range.
-								</p>
+								<div className='mt-3 space-y-2'>
+									<p className='text-xs text-muted-foreground'>
+										No data for the selected filters. Try expanding the time
+										range or resetting filters.
+									</p>
+									<div className='flex gap-2'>
+										<Button
+											variant='outline'
+											size='sm'
+											onClick={resetFilters}
+										>
+											Reset filters
+										</Button>
+										<Button
+											size='sm'
+											asChild
+										>
+											<Link href='/equipments/action?action=add'>
+												Add asset
+											</Link>
+										</Button>
+									</div>
+								</div>
 							) : null}
 						</CardContent>
 					</Card>
@@ -657,7 +775,7 @@ export default function AnalyticsPage() {
 								<XAxis
 									dataKey='month'
 									tickMargin={8}
-									tickFormatter={(value) => value.slice(5)} // mostra só MM (mais clean)
+									tickFormatter={(value) => value.slice(5)}
 									interval='preserveStartEnd'
 									minTickGap={18}
 								/>
@@ -678,12 +796,6 @@ export default function AnalyticsPage() {
 								<Tooltip content={<CompactTooltip />} />
 							</AreaChart>
 						</ChartContainer>
-
-						{!isLoading && timeSeriesData.length === 0 ? (
-							<p className='mt-3 text-xs text-muted-foreground'>
-								Not enough creation history in the selected time range.
-							</p>
-						) : null}
 					</CardContent>
 				</Card>
 

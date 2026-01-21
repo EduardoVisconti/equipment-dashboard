@@ -14,7 +14,8 @@ import {
 	serverTimestamp,
 	query,
 	orderBy,
-	limit
+	limit,
+	where
 } from 'firebase/firestore';
 
 const equipmentsCollection = collection(db, 'equipments');
@@ -210,6 +211,33 @@ export const createEquipment = async (
 	data: Omit<Equipment, 'id'>,
 	actor: { uid: string; email?: string | null }
 ): Promise<void> => {
+	const serial = data.serialNumber?.trim();
+
+	if (serial) {
+		const snapshot = await getDocs(
+			query(
+				equipmentsCollection,
+				where('serialNumber', '==', serial)
+				// Observação:
+				// Não filtramos archivedAt aqui com where('archivedAt','==',null)
+				// porque seus docs antigos podem NÃO ter esse campo.
+				// Então a regra fica: se achar qualquer doc com esse serial
+				// e ele NÃO estiver archived, bloqueia.
+			)
+		);
+
+		const serialExistsInActiveAsset = snapshot.docs.some((d) => {
+			const existing = d.data() as any;
+			// se não tem archivedAt, tratamos como "não arquivado"
+			const isArchived = Boolean(existing?.archivedAt);
+			return !isArchived;
+		});
+
+		if (serialExistsInActiveAsset) {
+			// padrão enterprise: erro previsível pra UI tratar
+			throw new Error('SERIAL_ALREADY_EXISTS');
+		}
+	}
 	const interval = data.serviceIntervalDays ?? 180;
 
 	const next =

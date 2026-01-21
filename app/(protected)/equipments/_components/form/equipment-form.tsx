@@ -9,11 +9,7 @@ import { toast } from 'sonner';
 import { addDays, format, isAfter, isBefore, parseISO } from 'date-fns';
 
 import type { Equipment } from '@/types/equipment';
-import {
-	createEquipment,
-	updateEquipment,
-	isSerialNumberTaken
-} from '@/data-access/equipments';
+import { createEquipment, updateEquipment } from '@/data-access/equipments';
 
 import { useAuth } from '@/context/auth-context';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -139,6 +135,7 @@ export default function EquipmentForm({
 	});
 
 	const createMutation = useMutation({
+		// Enterprise: mutation só faz a escrita. Toast fica no onSuccess/onError
 		mutationFn: async (payload: Omit<Equipment, 'id'>) => {
 			if (!user) throw new Error('Not authenticated');
 			if (!isAdmin) throw new Error('Not authorized');
@@ -146,10 +143,22 @@ export default function EquipmentForm({
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['equipments'] });
-			toast.success('Equipment created successfully');
+			toast.success('Asset created');
 			router.push('/equipments');
 		},
-		onError: () => toast.error('Failed to create equipment')
+		onError: (err) => {
+			// Enterprise: traduz erros “known” em feedback de campo
+			if (err instanceof Error && err.message === 'SERIAL_ALREADY_EXISTS') {
+				form.setError('serialNumber', {
+					type: 'validate',
+					message: 'This serial number is already in use'
+				});
+				toast.error('Serial number already exists');
+				return;
+			}
+
+			toast.error('Failed to create asset');
+		}
 	});
 
 	const updateMutation = useMutation({
@@ -166,10 +175,10 @@ export default function EquipmentForm({
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['equipments'] });
-			toast.success('Equipment updated successfully');
+			toast.success('Asset updated');
 			router.push('/equipments');
 		},
-		onError: () => toast.error('Failed to update equipment')
+		onError: () => toast.error('Failed to update asset')
 	});
 
 	const isSaving =
@@ -189,6 +198,7 @@ export default function EquipmentForm({
 
 		const interval = parsed.serviceIntervalDays;
 
+		// Se o usuário não preencher nextServiceDate, calculamos automaticamente
 		const rawNext = parsed.nextServiceDate?.trim();
 		let next: string | undefined = rawNext || undefined;
 
@@ -198,8 +208,8 @@ export default function EquipmentForm({
 		}
 
 		const payload: Omit<Equipment, 'id'> = {
-			name: parsed.name,
-			serialNumber: parsed.serialNumber,
+			name: parsed.name.trim(),
+			serialNumber: parsed.serialNumber.trim(),
 			status: parsed.status,
 
 			purchaseDate: parsed.purchaseDate,
@@ -212,21 +222,13 @@ export default function EquipmentForm({
 			owner: parsed.owner?.trim() || undefined
 		};
 
-		const serialTaken = await isSerialNumberTaken(
-			parsed.serialNumber,
-			action === 'edit' ? equipment?.id : undefined
-		);
-
-		if (serialTaken) {
-			form.setError('serialNumber', {
-				type: 'validate',
-				message: 'This serial number is already in use'
-			});
-			toast.error('Serial number already exists');
+		// IMPORTANTE (enterprise):
+		// - Não fazemos mais isSerialNumberTaken no client.
+		// - Quem garante unicidade é createEquipment no data-access.
+		if (action === 'add') {
+			createMutation.mutate(payload);
 			return;
 		}
-
-		if (action === 'add') createMutation.mutate(payload);
 
 		if (action === 'edit' && equipment?.id) {
 			updateMutation.mutate({ id: equipment.id, data: payload });

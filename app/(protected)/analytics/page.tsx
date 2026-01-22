@@ -241,9 +241,7 @@ export default function AnalyticsPage() {
 		isFetching,
 		isError
 	} = useQuery<Equipment[]>({
-		// evita conflito com outras telas e melhora previsibilidade enterprise
 		queryKey: ['equipments', 'analytics'],
-		// IMPORTANT: não passar getEquipmentsList direto, porque o React Query injeta QueryFunctionContext
 		queryFn: () => getEquipmentsList({ includeArchived: true }),
 		staleTime: 60_000
 	});
@@ -576,9 +574,178 @@ export default function AnalyticsPage() {
 						value='overview'
 						className='space-y-6'
 					>
-						{/* ... seu conteúdo continua igual daqui para baixo ... */}
+						<div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+							{isLoading ? (
+								Array.from({ length: 4 }).map((_, i) => (
+									<Card
+										key={i}
+										className='min-w-0'
+									>
+										<CardHeader className='space-y-2'>
+											<Skeleton className='h-4 w-28' />
+											<Skeleton className='h-8 w-20' />
+										</CardHeader>
+										<CardContent>
+											<Skeleton className='h-4 w-32' />
+										</CardContent>
+									</Card>
+								))
+							) : (
+								<>
+									<KpiCard
+										title='Assets in scope'
+										value={kpis.total}
+										icon={<BarChart3 className='h-4 w-4' />}
+										footer={`Based on current filters (${timeRange}d)`}
+										badge={deltaBadge(kpis.total, kpisPrev.total)}
+										badgeVariant='outline'
+									/>
+									<KpiCard
+										title='In service'
+										value={kpis.active}
+										icon={<CheckCircle2 className='h-4 w-4' />}
+										footer='Operational availability'
+										badge={deltaBadge(kpis.active, kpisPrev.active)}
+										badgeVariant='outline'
+									/>
+									<KpiCard
+										title='Maintenance'
+										value={kpis.maintenance}
+										icon={<Wrench className='h-4 w-4' />}
+										footer='Under maintenance'
+										badge={deltaBadge(kpis.maintenance, kpisPrev.maintenance)}
+										badgeVariant='outline'
+									/>
+									<KpiCard
+										title='Out of service'
+										value={kpis.inactive}
+										icon={<AlertTriangle className='h-4 w-4' />}
+										footer='Inactive items'
+										badge={deltaBadge(kpis.inactive, kpisPrev.inactive)}
+										badgeVariant='outline'
+									/>
+								</>
+							)}
+						</div>
 
-						{/* IMPORTANTE: aqui só removi o activeBar inválido no Bar */}
+						<div className='grid gap-6 xl:grid-cols-2'>
+							<Card className='min-w-0'>
+								<CardHeader className='flex flex-row items-center justify-between'>
+									<CardTitle className='flex items-center gap-2'>
+										<PieIcon className='h-4 w-4' />
+										Assets by status
+									</CardTitle>
+									{!isLoading ? (
+										<Badge
+											variant='outline'
+											className='text-muted-foreground'
+										>
+											{kpis.total} total
+										</Badge>
+									) : null}
+								</CardHeader>
+
+								<CardContent className='overflow-hidden'>
+									<ChartContainer
+										config={{
+											active: {
+												label: 'In Service',
+												color: STATUS_COLORS.active
+											},
+											maintenance: {
+												label: 'Maintenance',
+												color: STATUS_COLORS.maintenance
+											},
+											inactive: {
+												label: 'Out of Service',
+												color: STATUS_COLORS.inactive
+											}
+										}}
+										className='h-[280px] sm:h-[320px] w-full'
+									>
+										<PieChart>
+											<Pie
+												data={statusChartData}
+												dataKey='count'
+												nameKey='label'
+												innerRadius={55}
+												outerRadius={90}
+											>
+												{statusChartData.map((entry) => (
+													<Cell
+														key={entry.status}
+														fill={
+															STATUS_COLORS[entry.status as Equipment['status']]
+														}
+													/>
+												))}
+											</Pie>
+
+											<Tooltip content={<CompactTooltip />} />
+										</PieChart>
+									</ChartContainer>
+
+									{!isLoading && kpis.total === 0 ? (
+										<div className='mt-3 space-y-2'>
+											<p className='text-xs text-muted-foreground'>
+												No data for the selected filters. Try expanding the time
+												range or resetting filters.
+											</p>
+											<div className='flex gap-2'>
+												<Button
+													variant='outline'
+													size='sm'
+													onClick={resetFilters}
+												>
+													Reset filters
+												</Button>
+												<Button
+													size='sm'
+													asChild
+												>
+													<Link href='/equipments/action?action=add'>
+														Add asset
+													</Link>
+												</Button>
+											</div>
+										</div>
+									) : null}
+								</CardContent>
+							</Card>
+
+							<Card className='min-w-0'>
+								<CardHeader>
+									<CardTitle className='flex items-center gap-2'>
+										<AlertTriangle className='h-4 w-4' />
+										Insights
+									</CardTitle>
+								</CardHeader>
+								<CardContent className='space-y-2'>
+									{isLoading ? (
+										<div className='space-y-2'>
+											<Skeleton className='h-4 w-11/12' />
+											<Skeleton className='h-4 w-10/12' />
+											<Skeleton className='h-4 w-9/12' />
+										</div>
+									) : insights.length === 0 ? (
+										<p className='text-sm text-muted-foreground'>
+											Add assets to generate operational insights.
+										</p>
+									) : (
+										<ul className='space-y-2'>
+											{insights.map((line) => (
+												<li
+													key={line}
+													className='text-sm text-muted-foreground'
+												>
+													• {line}
+												</li>
+											))}
+										</ul>
+									)}
+								</CardContent>
+							</Card>
+						</div>
 					</TabsContent>
 
 					{/* ---------------- MAINTENANCE ---------------- */}
@@ -586,7 +753,164 @@ export default function AnalyticsPage() {
 						value='maintenance'
 						className='space-y-6'
 					>
-						{/* ... igual ... */}
+						<div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+							{isLoading ? (
+								Array.from({ length: 4 }).map((_, i) => (
+									<Card
+										key={i}
+										className='min-w-0'
+									>
+										<CardHeader className='space-y-2'>
+											<Skeleton className='h-4 w-28' />
+											<Skeleton className='h-8 w-20' />
+										</CardHeader>
+										<CardContent>
+											<Skeleton className='h-4 w-32' />
+										</CardContent>
+									</Card>
+								))
+							) : (
+								<>
+									<KpiCard
+										title='Maintenance due (30d)'
+										value={maintenanceMetrics.due30}
+										icon={<Clock className='h-4 w-4' />}
+										footer='Upcoming service window'
+										badge={deltaBadge(
+											maintenanceMetrics.due30,
+											maintenanceMetricsPrev.due30
+										)}
+										badgeVariant={
+											maintenanceMetrics.due30 > maintenanceMetricsPrev.due30
+												? 'destructive'
+												: 'outline'
+										}
+									/>
+									<KpiCard
+										title='Due in 7 days'
+										value={maintenanceMetrics.due7}
+										icon={<Clock className='h-4 w-4' />}
+										footer='Immediate planning horizon'
+										badge={deltaBadge(
+											maintenanceMetrics.due7,
+											maintenanceMetricsPrev.due7
+										)}
+										badgeVariant={
+											maintenanceMetrics.due7 > maintenanceMetricsPrev.due7
+												? 'destructive'
+												: 'outline'
+										}
+									/>
+									<KpiCard
+										title='Overdue'
+										value={maintenanceMetrics.overdue}
+										icon={<Wrench className='h-4 w-4' />}
+										footer='Past due maintenance'
+										badge={deltaBadge(
+											maintenanceMetrics.overdue,
+											maintenanceMetricsPrev.overdue
+										)}
+										badgeVariant={
+											maintenanceMetrics.overdue > 0 ? 'destructive' : 'outline'
+										}
+									/>
+									<KpiCard
+										title='In service'
+										value={kpis.active}
+										icon={<CheckCircle2 className='h-4 w-4' />}
+										footer='Available capacity'
+										badge={deltaBadge(kpis.active, kpisPrev.active)}
+										badgeVariant='outline'
+									/>
+								</>
+							)}
+						</div>
+
+						<Card className='min-w-0'>
+							<CardHeader className='flex flex-row items-center justify-between'>
+								<CardTitle className='flex items-center gap-2'>
+									<Wrench className='h-4 w-4' />
+									At-risk assets
+								</CardTitle>
+								<Button
+									variant='outline'
+									size='sm'
+									asChild
+								>
+									<Link href='/equipments'>Open list</Link>
+								</Button>
+							</CardHeader>
+							<CardContent>
+								{isLoading ? (
+									<div className='space-y-2'>
+										{Array.from({ length: 6 }).map((_, i) => (
+											<Skeleton
+												key={i}
+												className='h-10 w-full'
+											/>
+										))}
+									</div>
+								) : maintenanceMetrics.dueSoonTop.length === 0 ? (
+									<p className='text-sm text-muted-foreground'>
+										No overdue or due-soon assets in the next 30 days.
+									</p>
+								) : (
+									<div className='space-y-2'>
+										{maintenanceMetrics.dueSoonTop.map((eq) => {
+											const next = (eq as any)._nextServiceDate as
+												| Date
+												| null
+												| undefined;
+											const days = (eq as any)._days as number | undefined;
+											const overdue = next ? isBefore(next, today) : false;
+
+											return (
+												<div
+													key={eq.id}
+													className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border px-3 py-2'
+												>
+													<div className='min-w-0'>
+														<div className='truncate text-sm font-medium'>
+															{eq.name}
+														</div>
+														<div className='truncate text-xs text-muted-foreground'>
+															Serial: {eq.serialNumber || '—'}
+														</div>
+													</div>
+
+													<div className='flex flex-wrap items-center gap-2'>
+														<StatusPill status={eq.status} />
+														<Badge
+															variant={overdue ? 'destructive' : 'secondary'}
+															className='shrink-0'
+														>
+															{next ? next.toISOString().slice(0, 10) : '—'}
+															{typeof days === 'number' ? (
+																<span className='ml-2 opacity-80'>
+																	(
+																	{days < 0
+																		? `${Math.abs(days)}d overdue`
+																		: `${days}d`}
+																	)
+																</span>
+															) : null}
+														</Badge>
+														<Button
+															size='sm'
+															variant='outline'
+															asChild
+															className='shrink-0'
+														>
+															<Link href={`/equipments/${eq.id}`}>View</Link>
+														</Button>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</CardContent>
+						</Card>
 					</TabsContent>
 
 					{/* ---------------- TRENDS ---------------- */}

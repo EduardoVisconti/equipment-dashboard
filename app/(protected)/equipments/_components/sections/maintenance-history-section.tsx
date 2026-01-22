@@ -53,6 +53,15 @@ function typeBadgeVariant(type: MaintenanceRecord['type']) {
 	return type === 'preventive' ? 'secondary' : 'outline';
 }
 
+function getErrorMessage(err: unknown) {
+	if (err instanceof Error) {
+		if (err.message === 'Not authenticated') return 'Sign in to continue.';
+		if (err.message === 'Not authorized') return 'Viewer role: read-only.';
+		return err.message;
+	}
+	return 'Unexpected error';
+}
+
 export default function MaintenanceHistorySection({
 	equipmentId
 }: {
@@ -107,15 +116,34 @@ export default function MaintenanceHistorySection({
 				{ uid: user.uid, email: user.email }
 			);
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
+		onSuccess: async () => {
+			// Maintenance history (subcollection)
+			await queryClient.invalidateQueries({
 				queryKey: ['equipments', equipmentId, 'maintenance']
 			});
+
+			// Asset details + events
+			await queryClient.invalidateQueries({
+				queryKey: ['equipments', equipmentId]
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ['equipments', equipmentId, 'events']
+			});
+
+			// Lists / dashboards / analytics that depend on lastServiceDate/nextServiceDate
+			await queryClient.invalidateQueries({ queryKey: ['equipments'] });
+			await queryClient.invalidateQueries({
+				queryKey: ['equipments', 'analytics']
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ['equipments', 'dashboard']
+			});
+
 			toast.success('Maintenance record added');
 			form.reset({ date: today, type: 'preventive', notes: '' });
 			setShowForm(false);
 		},
-		onError: () => toast.error('Failed to add maintenance record')
+		onError: (err) => toast.error(getErrorMessage(err))
 	});
 
 	const isSaving = addMutation.isPending;
@@ -194,11 +222,12 @@ export default function MaintenanceHistorySection({
 										<FormItem>
 											<FormLabel>Type</FormLabel>
 											<Select
+												disabled={isSaving || isBlocked}
 												value={field.value}
 												onValueChange={field.onChange}
 											>
 												<FormControl>
-													<SelectTrigger disabled={isSaving || isBlocked}>
+													<SelectTrigger>
 														<SelectValue placeholder='Select type' />
 													</SelectTrigger>
 												</FormControl>
@@ -291,8 +320,8 @@ export default function MaintenanceHistorySection({
 								{r.createdByEmail
 									? r.createdByEmail
 									: r.createdBy
-									? `${r.createdBy.slice(0, 6)}…${r.createdBy.slice(-4)}`
-									: '—'}
+										? `${r.createdBy.slice(0, 6)}…${r.createdBy.slice(-4)}`
+										: '—'}
 							</p>
 						</div>
 					))}

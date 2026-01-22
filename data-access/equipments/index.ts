@@ -447,7 +447,8 @@ export const addMaintenanceRecord = async (
 	>,
 	actor: { uid: string; email?: string | null }
 ): Promise<void> => {
-	const payload: Omit<MaintenanceRecord, 'id'> & Record<string, any> = {
+	// 1) cria o maintenance record (subcollection)
+	const recordPayload: Omit<MaintenanceRecord, 'id'> & Record<string, any> = {
 		...data,
 		notes: data.notes?.trim() || undefined,
 		createdBy: actor.uid,
@@ -455,13 +456,38 @@ export const addMaintenanceRecord = async (
 		createdAt: serverTimestamp()
 	};
 
-	Object.keys(payload).forEach(
-		(k) => payload[k] === undefined && delete payload[k]
+	Object.keys(recordPayload).forEach(
+		(k) => recordPayload[k] === undefined && delete recordPayload[k]
 	);
 
-	await addDoc(maintenanceCollection(equipmentId), payload);
+	await addDoc(maintenanceCollection(equipmentId), recordPayload);
 
-	// Event enterprise: loga manutenção na trilha
+	// 2) Atualiza o equipamento: lastServiceDate + nextServiceDate (+ audit)
+	//    - pega o doc para saber serviceIntervalDays atual (fallback 180)
+	const equipmentRef = doc(db, 'equipments', equipmentId);
+	const snap = await getDoc(equipmentRef);
+
+	let interval = 180;
+	if (snap.exists()) {
+		const existing = snap.data() as any;
+		if (typeof existing?.serviceIntervalDays === 'number') {
+			interval = existing.serviceIntervalDays;
+		}
+	}
+
+	const nextServiceDate = computeNextServiceDate(data.date, interval);
+
+	const equipmentPatch: Record<string, any> = {
+		lastServiceDate: data.date,
+		nextServiceDate,
+		updatedBy: actor.uid,
+		updatedByEmail: actor.email ?? null,
+		updatedAt: serverTimestamp()
+	};
+
+	await updateDoc(equipmentRef, equipmentPatch);
+
+	// 3) Event enterprise: loga manutenção na trilha
 	await addEquipmentEvent(equipmentId, {
 		type: 'maintenance.added',
 		actorId: actor.uid,
@@ -469,7 +495,9 @@ export const addMaintenanceRecord = async (
 		message: 'Maintenance record added',
 		metadata: {
 			date: data.date,
-			maintenanceType: data.type
+			maintenanceType: data.type,
+			nextServiceDate,
+			serviceIntervalDays: interval
 		}
 	});
 };

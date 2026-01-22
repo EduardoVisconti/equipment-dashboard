@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pencil } from 'lucide-react';
+import { addDays, differenceInDays, isBefore, parseISO } from 'date-fns';
+
 import MaintenanceHistorySection from '../_components/sections/maintenance-history-section';
 import ActivityFeedSection from '../_components/sections/activity-feed-section';
 import PageHeader from '@/components/core/headers/page-header';
@@ -38,7 +40,7 @@ function truncateId(value?: string, max = 14) {
 
 function formatTimestamp(ts?: Timestamp | FieldValue | null): string {
 	// serverTimestamp() quando lido geralmente vira Timestamp,
-	// mas aqui aceitamos null/FieldValue/undefined para resiliência enterprise.
+	// mas aceitamos null/FieldValue/undefined para resiliência enterprise.
 	if (!ts) return '—';
 
 	const maybe = ts as unknown as { toDate?: () => Date };
@@ -54,6 +56,76 @@ function formatTimestamp(ts?: Timestamp | FieldValue | null): string {
 		minute: '2-digit',
 		hour12: true
 	}).format(date);
+}
+
+/** Calcula Next Service Due:
+ * - prioridade: nextServiceDate (se existir)
+ * - fallback: lastServiceDate + intervalDays (default 180)
+ */
+function computeNextServiceDue(asset: Equipment): {
+	nextDateLabel: string;
+	state: 'overdue' | 'due_soon' | 'scheduled' | 'unknown';
+	daysDelta?: number;
+} {
+	const intervalDays = asset.serviceIntervalDays ?? 180;
+
+	// helper defensivo
+	const safeParse = (value?: string) => {
+		if (!value) return null;
+		try {
+			return parseISO(value);
+		} catch {
+			return null;
+		}
+	};
+
+	const next = safeParse(asset.nextServiceDate);
+	const last = safeParse(asset.lastServiceDate);
+
+	const computed = next ?? (last ? addDays(last, intervalDays) : null);
+
+	if (!computed) {
+		return { nextDateLabel: '—', state: 'unknown' };
+	}
+
+	const today = new Date();
+	const daysDelta = differenceInDays(computed, today);
+
+	// overdue
+	if (isBefore(computed, today)) {
+		return {
+			nextDateLabel: computed.toISOString().slice(0, 10),
+			state: 'overdue',
+			daysDelta
+		};
+	}
+
+	// due soon: 0..30 dias
+	if (daysDelta <= 30) {
+		return {
+			nextDateLabel: computed.toISOString().slice(0, 10),
+			state: 'due_soon',
+			daysDelta
+		};
+	}
+
+	return {
+		nextDateLabel: computed.toISOString().slice(0, 10),
+		state: 'scheduled',
+		daysDelta
+	};
+}
+
+function nextServiceBadge(
+	state: 'overdue' | 'due_soon' | 'scheduled' | 'unknown'
+) {
+	if (state === 'overdue')
+		return { variant: 'destructive' as const, label: 'Overdue' };
+	if (state === 'due_soon')
+		return { variant: 'outline' as const, label: 'Due soon' };
+	if (state === 'scheduled')
+		return { variant: 'secondary' as const, label: 'Scheduled' };
+	return { variant: 'outline' as const, label: 'Unknown' };
 }
 
 export default function AssetDetailsPage({
@@ -176,6 +248,17 @@ export default function AssetDetailsPage({
 	const updatedAt = formatTimestamp(asset.updatedAt);
 	const archivedAt = formatTimestamp(asset.archivedAt);
 
+	const intervalDays = asset.serviceIntervalDays ?? 180;
+	const nextService = computeNextServiceDue(asset);
+	const nextBadge = nextServiceBadge(nextService.state);
+
+	const nextServiceMeta =
+		nextService.state === 'unknown' || typeof nextService.daysDelta !== 'number'
+			? ''
+			: nextService.daysDelta < 0
+				? `(${Math.abs(nextService.daysDelta)}d overdue)`
+				: `(${nextService.daysDelta}d)`;
+
 	return (
 		<section>
 			<PageHeader
@@ -285,10 +368,31 @@ export default function AssetDetailsPage({
 										label='Last Service'
 										value={asset.lastServiceDate || '—'}
 									/>
+
+									{/* Enterprise: policy dinâmica */}
 									<InfoCard
 										label='Service Policy'
-										value='Every 180 days'
+										value={`Every ${intervalDays} days`}
 									/>
+
+									{/* Enterprise: next service com badge */}
+									<div className='rounded-md border p-4'>
+										<p className='text-xs text-muted-foreground'>
+											Next Service Due
+										</p>
+										<div className='mt-1 flex items-center gap-2'>
+											<p className='text-sm font-medium'>
+												{nextService.nextDateLabel}{' '}
+												<span className='text-xs text-muted-foreground'>
+													{nextServiceMeta}
+												</span>
+											</p>
+											<Badge variant={nextBadge.variant}>
+												{nextBadge.label}
+											</Badge>
+										</div>
+									</div>
+
 									<InfoCard
 										label='Record Source'
 										value='Firestore'
@@ -344,7 +448,7 @@ export default function AssetDetailsPage({
 									</div>
 									<p className='text-xs text-muted-foreground'>
 										Next service due is computed from the policy (last service +
-										180 days).
+										interval).
 									</p>
 									<div className='pt-2'>
 										<MaintenanceHistorySection equipmentId={asset.id} />

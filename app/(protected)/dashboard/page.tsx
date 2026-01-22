@@ -15,7 +15,7 @@ import {
 
 import PageHeader from '@/components/core/headers/page-header';
 import { getEquipmentsList } from '@/data-access/equipments';
-import { Equipment } from '@/types/equipment';
+import type { Equipment } from '@/types/equipment';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +50,8 @@ function deriveNextServiceDate(eq: Equipment) {
 	const last = safeDate(eq.lastServiceDate);
 	if (!last) return null;
 
-	const interval = anyEq?.serviceIntervalDays ?? 180;
+	const interval = eq.serviceIntervalDays ?? anyEq?.serviceIntervalDays ?? 180;
+
 	return addDays(last, interval);
 }
 
@@ -84,8 +85,9 @@ export default function DashboardPage() {
 		isFetching,
 		isError
 	} = useQuery<Equipment[]>({
-		queryKey: ['equipments'],
-		queryFn: getEquipmentsList
+		queryKey: ['equipments', 'dashboard'],
+		queryFn: () => getEquipmentsList({ includeArchived: true }),
+		staleTime: 60_000
 	});
 
 	const today = new Date();

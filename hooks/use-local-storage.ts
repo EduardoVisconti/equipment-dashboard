@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Hook enterprise para localStorage:
+ * Hook para localStorage:
  * - Inicializa o state lendo do localStorage (síncrono) -> evita sobrescrever no mount
  * - Persiste sempre que o state mudar
  * - Se a key mudar, tenta re-hidratar a partir da nova key
@@ -23,7 +23,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 		}
 	});
 
-	// 2) Se a key mudar em runtime, re-hidrata (caso você use keys dinâmicas no futuro)
+	// 2) Se a key mudar em runtime, re-hidrata o state
 	useEffect(() => {
 		try {
 			const raw = window.localStorage.getItem(key);

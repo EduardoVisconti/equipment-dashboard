@@ -24,7 +24,7 @@ export default function EquipmentActionPage() {
 
 	const isEdit = action === 'edit';
 
-	// Validação simples (enterprise: não deixa estado “meio quebrado”)
+	// Validação simples (não deixa estado “meio quebrado”)
 	const isValidAction = action === 'add' || action === 'edit';
 	const canLoad = isValidAction && (!isEdit || Boolean(id));
 

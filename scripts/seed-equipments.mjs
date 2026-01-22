@@ -16,7 +16,7 @@ const FieldValue = admin.firestore.FieldValue;
 // Hoje “fixo” para o seed (pra bater com seus dashboards e ficar previsível)
 const TODAY = '2026-01-22';
 
-// helper para padronizar payload enterprise
+// helper para padronizar payload
 function equipmentPayload(e) {
 	return {
 		name: e.name,
@@ -31,7 +31,7 @@ function equipmentPayload(e) {
 		location: e.location,
 		owner: e.owner,
 
-		// enterprise audit
+		// audit
 		createdBy: 'seed',
 		createdByEmail: 'seed@local',
 		updatedBy: 'seed',

@@ -35,13 +35,13 @@ interface DataTableProps<TData, TValue> {
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 
 	/**
-	 * Enterprise: persistir estado no localStorage (sort + pageSize)
+	 * Persistir estado no localStorage (sort + pageSize)
 	 * Ex: persistKey="equipments_table"
 	 */
 	persistKey?: string;
 
 	/**
-	 * Enterprise: default page size (se não tiver persistência)
+	 * Default page size (se não tiver persistência)
 	 */
 	defaultPageSize?: PageSizeOption;
 }
@@ -73,7 +73,7 @@ export function DataTable<TData, TValue>({
 	defaultPageSize = 10
 }: DataTableProps<TData, TValue>) {
 	/* ---------------------------------------
-	   Sorting + Pagination state (enterprise)
+	   Sorting + Pagination state
 	---------------------------------------- */
 
 	const persistSortingKey = persistKey ? `${persistKey}:sorting` : null;
@@ -141,7 +141,7 @@ export function DataTable<TData, TValue>({
 	});
 
 	/* ---------------------------------------
-	   Persistência (enterprise)
+	   Persistência estado
 	---------------------------------------- */
 
 	useEffect(() => {
@@ -252,7 +252,7 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 
-			{/* Footer enterprise: range + page size + controls */}
+			{/* Footer: range + page size + controls */}
 			<div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
 				<div className='text-xs text-muted-foreground'>
 					Showing <span className='font-medium text-foreground'>{start}</span>–

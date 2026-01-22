@@ -730,7 +730,6 @@ export default function DashboardPage() {
 					</Card>
 				</div>
 
-				{/* Small enterprise note */}
 				{!isLoading && equipments.some((e) => isArchivedAsset(e)) && (
 					<div className='rounded-md border bg-muted/30 p-4 flex items-start gap-3'>
 						<ShieldAlert className='h-4 w-4 mt-0.5 text-muted-foreground' />

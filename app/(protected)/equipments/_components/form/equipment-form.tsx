@@ -135,7 +135,7 @@ export default function EquipmentForm({
 	});
 
 	const createMutation = useMutation({
-		// Enterprise: mutation só faz a escrita. Toast fica no onSuccess/onError
+		//Mutation só faz a escrita. Toast fica no onSuccess/onError
 		mutationFn: async (payload: Omit<Equipment, 'id'>) => {
 			if (!user) throw new Error('Not authenticated');
 			if (!isAdmin) throw new Error('Not authorized');
@@ -147,7 +147,7 @@ export default function EquipmentForm({
 			router.push('/equipments');
 		},
 		onError: (err) => {
-			// Enterprise: traduz erros “known” em feedback de campo
+			// Traduz erros “known” em feedback de campo
 			if (err instanceof Error && err.message === 'SERIAL_ALREADY_EXISTS') {
 				form.setError('serialNumber', {
 					type: 'validate',
@@ -222,9 +222,6 @@ export default function EquipmentForm({
 			owner: parsed.owner?.trim() || undefined
 		};
 
-		// IMPORTANTE (enterprise):
-		// - Não fazemos mais isSerialNumberTaken no client.
-		// - Quem garante unicidade é createEquipment no data-access.
 		if (action === 'add') {
 			createMutation.mutate(payload);
 			return;

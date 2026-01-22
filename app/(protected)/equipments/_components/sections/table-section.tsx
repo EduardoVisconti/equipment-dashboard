@@ -72,7 +72,6 @@ function computeNextServiceDate(lastServiceDate: string, intervalDays: number) {
 }
 
 /**
- * Enterprise rule:
  * - Prefer stored nextServiceDate
  * - Else derive from lastServiceDate + serviceIntervalDays (default 180)
  */

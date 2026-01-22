@@ -40,7 +40,7 @@ function truncateId(value?: string, max = 14) {
 
 function formatTimestamp(ts?: Timestamp | FieldValue | null): string {
 	// serverTimestamp() quando lido geralmente vira Timestamp,
-	// mas aceitamos null/FieldValue/undefined para resiliência enterprise.
+	// mas aceitamos null/FieldValue/undefined.
 	if (!ts) return '—';
 
 	const maybe = ts as unknown as { toDate?: () => Date };
@@ -369,13 +369,13 @@ export default function AssetDetailsPage({
 										value={asset.lastServiceDate || '—'}
 									/>
 
-									{/* Enterprise: policy dinâmica */}
+									{/* policy dinâmica */}
 									<InfoCard
 										label='Service Policy'
 										value={`Every ${intervalDays} days`}
 									/>
 
-									{/* Enterprise: next service com badge */}
+									{/* next service com badge */}
 									<div className='rounded-md border p-4'>
 										<p className='text-xs text-muted-foreground'>
 											Next Service Due

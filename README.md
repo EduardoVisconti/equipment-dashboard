@@ -1,8 +1,8 @@
-# AssetOps — Equipment Management Platform
+# AssetOps — Equipment Management & Operations Platform
 
-A **production-grade Equipment & Operations Management platform** built with **Next.js 14**, focused on **real-world frontend architecture, data consistency, and decision-oriented dashboards**.
+AssetOps is a **production-grade equipment and operations management platform** built with **Next.js 14 (App Router)** and **Firebase**, designed to mirror how **real-world operations, maintenance, and asset teams** manage physical assets at scale.
 
-This project was designed to simulate how a **mid-size or enterprise operations team** would manage physical assets, maintenance cycles, and operational risk — with clarity, performance, and scalability in mind.
+This project emphasizes **enterprise frontend architecture**, **data consistency**, **auditability**, and **decision-oriented dashboards**, making it suitable both as a **portfolio-grade system** and as a foundation for real SaaS products.
 
 ---
 
@@ -18,168 +18,193 @@ This project was designed to simulate how a **mid-size or enterprise operations 
 
 ## 🔑 Demo Access
 
-A **public demo account** is available for evaluation.
+A public demo account is available.
 
-**Credentials:**
+- **Email:** `client@test.com`
+- **Password:** `123456`
 
-- Email: `client@test.com`
-- Password: `123456`
-
-> ⚠️ Demo data is non-sensitive and may be reset at any time.
+> Demo data is non-sensitive and may be reset at any time.
 
 ---
 
 ## 🧱 Tech Stack
 
 ### Frontend
+
 - Next.js 14 (App Router)
 - React
 - TypeScript
 - Tailwind CSS
 - shadcn/ui
-- Recharts (customized via shadcn chart container)
+- lucide-react
+- Recharts
 
 ### State & Data
+
 - TanStack React Query (server-state management)
 - React Hook Form
 - Zod (schema validation)
 
 ### Backend / Services
+
 - Firebase Firestore
 - Firebase Authentication (Email / Password)
 
 ### Tooling
+
 - Vercel (Deployment)
-- ESLint
-- Prettier
+- ESLint / Prettier
 - Conventional Commits
+
+---
+
+## 🧠 Product Scope
+
+AssetOps allows teams to:
+
+- Register and manage physical assets
+- Track operational status and lifecycle
+- Manage preventive and corrective maintenance
+- Detect overdue and upcoming service events
+- Analyze operational health and trends
+- Maintain full audit trails
+- Enforce role-based access (admin / viewer)
+- Archive assets without breaking historical data
 
 ---
 
 ## ✨ Core Features
 
-### 🔐 Authentication & Access Control
+### 🔐 Authentication & Roles
+
 - Firebase Email/Password authentication
-- Protected routes using Next.js route groups
-- Client-side session validation with loading states
-- Firestore writes restricted to authenticated users
+- Protected routes via Next.js route groups
+- Role-based access:
+  - **Admin:** full write access
+  - **Viewer:** read-only
+- UI permissions enforced client-side
+- Designed for Firestore Rules enforcement
 
 ---
 
-### 🧰 Equipment Management (CRUD)
-- Create, edit, and delete assets
-- Shared form logic for add/edit flows
-- Schema validation with Zod
-- Automatic maintenance date calculation
-- Optional service interval per asset
-- Optimistic UI updates with React Query
+### 🧰 Equipment Management
 
-**Tracked asset fields:**
+- Create, edit, archive, and restore assets
+- Enterprise-safe handling of archived records
+- Serial number uniqueness validation
+- Automatic maintenance interval calculations
+- Audit metadata on all writes
+
+**Tracked fields include:**
+
 - Name
 - Serial number
-- Status (In Service / Maintenance / Out of Service)
+- Status (active / maintenance / inactive)
 - Purchase date
 - Last service date
-- Next service date (manual or auto-derived)
+- Next service date (stored or derived)
 - Service interval (days)
-- Location
-- Owner
+- Archive metadata
+- Audit fields (createdBy / updatedBy)
 
 ---
 
-### 📊 Operational Dashboard
+### 🛠 Maintenance History
+
+- Preventive and corrective maintenance records
+- Subcollection-based model
+- Automatic updates to:
+  - lastServiceDate
+  - nextServiceDate
+- Event logged to activity feed on each maintenance entry
+- Admin-only write access
+
+---
+
+### 📊 Dashboard
+
 A real-time operational overview focused on **actionability**:
 
 - Total assets
-- Assets in service / out of service
-- Maintenance due (7d / 30d)
+- Status distribution
 - Overdue maintenance
-- Data quality score (critical fields completeness)
-- Priority alerts
-- At-risk assets list
+- Maintenance due in 7 / 30 days
+- Data quality indicators
+- Assets requiring attention
 - Recent activity feed
 
-> Dashboard metrics are derived dynamically from Firestore data — no mock logic.
+All metrics are derived from live Firestore data.
 
 ---
 
-### 📈 Analytics Page
-A separate analytics view designed for **strategic insights**, not redundancy:
+### 📈 Analytics
 
-- Assets in scope (filter-based)
-- Status distribution (Pie + Bar charts)
+Analytics are intentionally separated from the dashboard.
+
+Tabs:
+
+- **Overview**
+- **Maintenance**
+- **Trends**
+
+Capabilities:
+
+- Status distribution
 - Maintenance trends
-- Assets created over time (Area chart)
-- Overdue & upcoming maintenance detection
-- Operational insights generated from live data
-- Time range and status filters
-
-> Analytics and Dashboard intentionally answer **different questions**.
+- Asset creation over time
+- Overdue vs upcoming service detection
+- Time-range and status filters
 
 ---
 
-### ⌨️ Command Palette (Cmd / Ctrl + K)
-- Keyboard-first navigation
-- Quick access to core actions and pages
-- Improves power-user workflow
+### 📋 Equipment Table (Enterprise-grade)
+
+- Saved Views (persisted via localStorage):
+  - Operational
+  - Maintenance Focus
+  - Archived
+- Persistent filters:
+  - Search
+  - Status
+  - Sort
+  - Include archived
+- Operational sorting strategies
+- Next Service column with urgency badges
+- Admin-only contextual actions
 
 ---
 
-### 🎨 UX & UI Enhancements
-- Skeleton loaders
-- Empty states with guidance
-- Toast notifications (Sonner)
-- Confirmation dialogs
-- Responsive layout (mobile → desktop)
-- Dark / Light mode
-- Consistent spacing & visual hierarchy
+## 🗂️ Data Architecture
 
----
-
-## 🔐 Firebase Security Model
-
-Firestore rules:
+### Firestore Structure
 
 ```
-allow read: if true;
-allow write: if request.auth != null;
+equipments/
+ ├─ {equipmentId}
+ │   ├─ fields...
+ │   ├─ maintenance/
+ │   │   ├─ {maintenanceId}
+ │   ├─ events/
+ │   │   ├─ {eventId}
 ```
 
-### Why?
-- Enables Server Component data fetching
-- Maintains write security
-- Matches real-world SSR constraints
+### Key Design Rules
 
----
-
-## 🗂️ Project Structure (Simplified)
-
-```
-app/
- ├─ (auth)/login
- ├─ (protected)/dashboard
- ├─ (protected)/equipments
- ├─ (protected)/analytics
-
-components/
- ├─ core (navigation, headers, overlays)
- ├─ ui (shadcn)
-
-data-access/
- ├─ equipments (Firestore logic)
-
-types/
-```
+- Archived items are filtered client-side
+- `archivedAt == null` is never used in Firestore queries
+- Dates stored as `yyyy-MM-dd` strings
+- Derived values always have safe fallbacks
 
 ---
 
 ## 🧠 Architectural Decisions
 
-- Clear separation between **operational view** (Dashboard) and **analytical view** (Analytics)
+- Clear separation between **operational dashboards** and **analytics**
 - React Query as the single source of server truth
-- Minimal schema, derived data where possible
-- Avoided premature abstractions
-- Strong emphasis on UX clarity and predictability
+- No hidden business logic in UI components
+- Predictable query keys and invalidation
+- Avoided premature abstraction layers
+- Enterprise-oriented data consistency rules
 
 ---
 
@@ -200,7 +225,7 @@ Create a `.env.local` file with your Firebase credentials.
 
 - Feature complete
 - Production-ready demo
-- Clean architecture
+- Enterprise-grade architecture
 - No known bugs
 
 ---
@@ -209,4 +234,4 @@ Create a `.env.local` file with your Firebase credentials.
 
 **Eduardo Visconti**  
 Frontend Developer  
-Focused on modern React, UX-driven systems, and scalable frontend architecture.
+Focused on scalable React systems, UX-driven products, and real-world frontend architecture.

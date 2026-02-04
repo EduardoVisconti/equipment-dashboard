@@ -243,7 +243,7 @@ This project challenged me to:
 
 - GitHub: [@EduardoVisconti](https://github.com/EduardoVisconti)
 - LinkedIn: [linkedin.com/in/eduardo-visconti](https://linkedin.com/in/eduardo-visconti)
-- Email: eduardovisconti11@email.com
+- Email: eduardovisconti11@gmail.com
 
 ---
 
